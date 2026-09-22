@@ -1,0 +1,26 @@
+{
+  "name": "chatgpt-bluetooth-audio-fix",
+  "version": "1.2.0",
+  "private": true,
+  "description": "Stop idle ChatGPT tabs from holding Bluetooth multipoint audio and blocking phone playback.",
+  "author": "Raj Piskala",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/rajpiskala/chatgpt-bluetooth-audio-fix.git"
+  },
+  "bugs": {
+    "url": "https://github.com/rajpiskala/chatgpt-bluetooth-audio-fix/issues"
+  },
+  "homepage": "https://github.com/rajpiskala/chatgpt-bluetooth-audio-fix#readme",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "check:syntax": "node --check src/chatgpt-bluetooth-audio-fix.user.js",
+    "test": "node --test",
+    "verify:metadata": "node tools/verify-metadata.mjs",
+    "check": "npm run check:syntax && npm test && npm run verify:metadata",
+    "release": "npm run check"
+  }
+}

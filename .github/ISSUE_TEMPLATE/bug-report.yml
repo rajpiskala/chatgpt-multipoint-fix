@@ -1,0 +1,88 @@
+name: Bug or compatibility report
+description: Report an audio-lock problem, regression, or new device result.
+title: "[Report]: "
+labels:
+  - compatibility
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for helping document this unusually hardware-dependent issue.
+        Remove conversation text, account information, and private logs.
+  - type: input
+    id: script-version
+    attributes:
+      label: Userscript version
+      placeholder: "1.2.0"
+    validations:
+      required: true
+  - type: input
+    id: headset
+    attributes:
+      label: Headset model
+      placeholder: "Bose QuietComfort Earbuds"
+    validations:
+      required: true
+  - type: input
+    id: computer
+    attributes:
+      label: Computer OS
+      placeholder: "Windows 11 24H2 or macOS 15"
+    validations:
+      required: true
+  - type: input
+    id: browser
+    attributes:
+      label: Browser and version
+      placeholder: "Firefox 143 or Chrome 152"
+    validations:
+      required: true
+  - type: input
+    id: userscript-manager
+    attributes:
+      label: Userscript manager and version
+      placeholder: "Tampermonkey 5.6"
+    validations:
+      required: true
+  - type: textarea
+    id: symptom
+    attributes:
+      label: What happened?
+      description: Describe the phone playback symptom and what immediately releases it.
+    validations:
+      required: true
+  - type: dropdown
+    id: closing-chatgpt
+    attributes:
+      label: Does closing every ChatGPT tab release the headphones?
+      options:
+        - "Yes"
+        - "No"
+        - "Not tested"
+    validations:
+      required: true
+  - type: dropdown
+    id: muting
+    attributes:
+      label: Does muting the ChatGPT tab release the headphones?
+      options:
+        - "Yes"
+        - "No"
+        - "Not tested"
+    validations:
+      required: true
+  - type: dropdown
+    id: voice-mode
+    attributes:
+      label: Was ChatGPT Voice Mode active?
+      options:
+        - "No"
+        - "Yes"
+        - "Unsure"
+    validations:
+      required: true
+  - type: textarea
+    id: diagnostics
+    attributes:
+      label: Optional sanitized diagnostics
+      description: Paste the result of Log audio diagnostics after removing private information.

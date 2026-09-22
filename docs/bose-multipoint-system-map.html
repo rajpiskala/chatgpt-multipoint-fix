@@ -1,0 +1,1070 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <link rel="icon" href="data:,">
+  <title>Bose Multipoint Audio Lock: Investigation and System Map</title>
+  <style>
+    :root {
+      --ink: #172126;
+      --muted: #59656b;
+      --paper: #f6f8f5;
+      --surface: #ffffff;
+      --line: #cfd7d3;
+      --line-strong: #99aaa3;
+      --teal: #087f73;
+      --teal-soft: #dff3ef;
+      --blue: #2d62c7;
+      --blue-soft: #e7eefc;
+      --red: #b83a32;
+      --red-soft: #fae7e4;
+      --amber: #956814;
+      --amber-soft: #f7edcf;
+      --green: #34784c;
+      --green-soft: #e1f1e6;
+      --charcoal: #263238;
+      --shadow: 0 8px 24px rgba(23, 33, 38, 0.08);
+      --radius: 8px;
+      --content: 1180px;
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      color: var(--ink);
+      background: var(--paper);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+        "Segoe UI", sans-serif;
+      font-size: 16px;
+      line-height: 1.58;
+      letter-spacing: 0;
+    }
+
+    a { color: var(--blue); text-underline-offset: 3px; }
+    a:hover { color: #17499f; }
+    code, pre, .mono {
+      font-family: "Cascadia Code", "SFMono-Regular", Consolas, monospace;
+      letter-spacing: 0;
+    }
+    code {
+      padding: 0.08rem 0.28rem;
+      background: #edf0ee;
+      border-radius: 3px;
+      font-size: 0.92em;
+    }
+
+    .topline {
+      height: 6px;
+      background: linear-gradient(90deg, var(--teal) 0 34%, var(--blue) 34% 67%, var(--red) 67%);
+    }
+    .masthead {
+      background: var(--surface);
+      border-bottom: 1px solid var(--line);
+    }
+    .masthead-inner {
+      max-width: var(--content);
+      margin: 0 auto;
+      padding: 52px 28px 44px;
+    }
+    .eyebrow {
+      margin: 0 0 12px;
+      color: var(--teal);
+      font-size: 0.78rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+    h1, h2, h3, h4 { line-height: 1.18; letter-spacing: 0; }
+    h1 {
+      max-width: 900px;
+      margin: 0;
+      font-size: 3rem;
+      font-weight: 780;
+    }
+    .dek {
+      max-width: 860px;
+      margin: 18px 0 0;
+      color: var(--muted);
+      font-size: 1.18rem;
+    }
+    .meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px 22px;
+      margin-top: 24px;
+      color: var(--muted);
+      font-size: 0.88rem;
+    }
+
+    .verdict-band {
+      background: var(--charcoal);
+      color: #f7fbf9;
+    }
+    .verdict-inner {
+      max-width: var(--content);
+      margin: 0 auto;
+      padding: 26px 28px;
+      display: grid;
+      grid-template-columns: 180px 1fr;
+      gap: 28px;
+      align-items: start;
+    }
+    .verdict-label {
+      color: #8fe0d2;
+      font-size: 0.78rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+    .verdict-text { margin: 0; font-size: 1.06rem; }
+
+    .layout {
+      max-width: var(--content);
+      margin: 0 auto;
+      padding: 36px 28px 80px;
+      display: grid;
+      grid-template-columns: 220px minmax(0, 1fr);
+      gap: 48px;
+      align-items: start;
+    }
+    .toc {
+      position: sticky;
+      top: 22px;
+      padding-right: 20px;
+      border-right: 1px solid var(--line);
+    }
+    .toc strong {
+      display: block;
+      margin-bottom: 11px;
+      color: var(--muted);
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+    .toc a {
+      display: block;
+      padding: 5px 0;
+      color: var(--muted);
+      text-decoration: none;
+      font-size: 0.9rem;
+    }
+    .toc a:hover, .toc a.active { color: var(--teal); font-weight: 700; }
+
+    main { min-width: 0; }
+    section {
+      padding: 8px 0 54px;
+      border-bottom: 1px solid var(--line);
+      scroll-margin-top: 20px;
+    }
+    section + section { padding-top: 54px; }
+    section:last-child { border-bottom: 0; }
+    h2 {
+      margin: 0 0 14px;
+      font-size: 2rem;
+    }
+    h3 {
+      margin: 30px 0 10px;
+      font-size: 1.22rem;
+    }
+    h4 {
+      margin: 0 0 7px;
+      font-size: 1rem;
+    }
+    p { margin: 0 0 14px; }
+    .section-lead { color: var(--muted); font-size: 1.06rem; }
+
+    .callout {
+      margin: 24px 0;
+      padding: 18px 20px;
+      border-left: 4px solid var(--teal);
+      background: var(--teal-soft);
+    }
+    .callout.warning { border-color: var(--amber); background: var(--amber-soft); }
+    .callout.danger { border-color: var(--red); background: var(--red-soft); }
+    .callout p:last-child { margin-bottom: 0; }
+
+    .diagram {
+      margin: 26px 0;
+      padding: 20px;
+      overflow-x: auto;
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+    }
+    .diagram-title {
+      margin-bottom: 14px;
+      color: var(--muted);
+      font-size: 0.78rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+    .diagram svg { display: block; width: 100%; min-width: 700px; height: auto; }
+    .legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px 20px;
+      margin-top: 12px;
+      color: var(--muted);
+      font-size: 0.82rem;
+    }
+    .legend span::before {
+      content: "";
+      display: inline-block;
+      width: 22px;
+      margin: 0 7px 3px 0;
+      border-top: 3px solid var(--teal);
+      vertical-align: middle;
+    }
+    .legend .control::before { border-top-style: dashed; border-color: var(--blue); }
+    .legend .optional::before { border-top-style: dashed; border-color: var(--line-strong); }
+
+    .summary-grid, .responsibility-grid, .producer-grid, .tool-grid, .fix-grid {
+      display: grid;
+      gap: 14px;
+      margin: 22px 0;
+    }
+    .summary-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .responsibility-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .producer-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .tool-grid, .fix-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .panel {
+      padding: 18px;
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+    }
+    .panel p:last-child, .panel ul:last-child { margin-bottom: 0; }
+    .panel .kicker {
+      display: block;
+      margin-bottom: 8px;
+      color: var(--teal);
+      font-size: 0.74rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+    }
+
+    .sequence {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      margin: 24px 0;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      overflow: hidden;
+      background: var(--surface);
+    }
+    .sequence-step {
+      position: relative;
+      min-height: 168px;
+      padding: 18px 16px;
+      border-right: 1px solid var(--line);
+    }
+    .sequence-step:last-child { border-right: 0; }
+    .sequence-step::after {
+      content: "";
+      position: absolute;
+      right: -7px;
+      top: 29px;
+      width: 12px;
+      height: 12px;
+      background: var(--surface);
+      border-top: 1px solid var(--line-strong);
+      border-right: 1px solid var(--line-strong);
+      transform: rotate(45deg);
+      z-index: 2;
+    }
+    .sequence-step:last-child::after { display: none; }
+    .sequence .num {
+      display: grid;
+      width: 28px;
+      height: 28px;
+      margin-bottom: 12px;
+      place-items: center;
+      border-radius: 50%;
+      background: var(--charcoal);
+      color: white;
+      font-size: 0.78rem;
+      font-weight: 800;
+    }
+    .sequence p { margin: 0; color: var(--muted); font-size: 0.88rem; }
+
+    .stack {
+      margin: 24px 0;
+      border: 1px solid var(--line);
+      background: var(--surface);
+    }
+    .stack-row {
+      display: grid;
+      grid-template-columns: 170px 1fr 170px;
+      gap: 18px;
+      padding: 14px 18px;
+      border-bottom: 1px solid var(--line);
+      align-items: center;
+    }
+    .stack-row:last-child { border-bottom: 0; }
+    .stack-row strong { color: var(--teal); }
+    .stack-row .sees { color: var(--muted); font-size: 0.87rem; }
+    .stack-row .blind {
+      color: var(--red);
+      font-size: 0.8rem;
+      font-weight: 700;
+      text-align: right;
+    }
+
+    table {
+      width: 100%;
+      margin: 22px 0;
+      border-collapse: collapse;
+      background: var(--surface);
+      font-size: 0.92rem;
+    }
+    th, td {
+      padding: 13px 14px;
+      border: 1px solid var(--line);
+      text-align: left;
+      vertical-align: top;
+    }
+    th { background: #e9eeeb; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.06em; }
+    .status {
+      display: inline-flex;
+      align-items: center;
+      min-height: 24px;
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: 0.74rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      white-space: nowrap;
+    }
+    .confirmed { color: var(--green); background: var(--green-soft); }
+    .supported { color: var(--blue); background: var(--blue-soft); }
+    .unknown { color: var(--amber); background: var(--amber-soft); }
+    .open { color: var(--red); background: var(--red-soft); }
+
+    .evidence-log {
+      margin: 20px 0;
+      padding: 18px;
+      overflow-x: auto;
+      color: #eaf5f1;
+      background: #1d292d;
+      border-radius: var(--radius);
+      font-size: 0.88rem;
+      line-height: 1.55;
+    }
+    .evidence-log .risk { color: #ffd67a; }
+    .evidence-log .clear { color: #86e1b1; }
+    .evidence-log .event { color: #98c4ff; }
+
+    ul, ol { padding-left: 1.25rem; }
+    li { margin: 7px 0; }
+    .plain-list { list-style: none; padding: 0; }
+    .plain-list li { padding-left: 24px; position: relative; }
+    .plain-list li::before {
+      content: "";
+      position: absolute;
+      left: 0;
+      top: 0.67em;
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      background: var(--teal);
+    }
+
+    .pair-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 14px;
+      margin: 22px 0;
+    }
+    .pair-card {
+      padding: 18px;
+      border-top: 4px solid var(--teal);
+      background: var(--surface);
+      box-shadow: var(--shadow);
+    }
+    .pair-card:nth-child(2) { border-color: var(--blue); }
+    .pair-card:nth-child(3) { border-color: var(--red); }
+    .pair-card .pair {
+      display: block;
+      margin-bottom: 10px;
+      font-size: 1.03rem;
+      font-weight: 800;
+    }
+
+    .architecture {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 14px;
+      margin: 22px 0;
+    }
+    .agent {
+      min-height: 188px;
+      padding: 18px;
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-top: 5px solid var(--teal);
+    }
+    .agent:nth-child(2) { border-top-color: var(--blue); }
+    .agent:nth-child(3) { border-top-color: var(--red); }
+    .coordinator {
+      margin: 14px 0 24px;
+      padding: 18px;
+      color: white;
+      background: var(--charcoal);
+      text-align: center;
+    }
+
+    .route {
+      display: grid;
+      grid-template-columns: 36px 1fr;
+      gap: 12px;
+      margin: 16px 0;
+    }
+    .route-num {
+      display: grid;
+      width: 32px;
+      height: 32px;
+      place-items: center;
+      border: 2px solid var(--teal);
+      border-radius: 50%;
+      color: var(--teal);
+      font-weight: 800;
+    }
+    .route p { margin: 3px 0 0; }
+
+    details {
+      margin: 12px 0;
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+    }
+    summary {
+      padding: 14px 16px;
+      cursor: pointer;
+      font-weight: 750;
+    }
+    details > div { padding: 0 16px 16px; }
+    .template {
+      white-space: pre-wrap;
+      padding: 16px;
+      overflow-wrap: anywhere;
+      background: #edf0ee;
+      border-radius: 4px;
+      font-size: 0.84rem;
+    }
+
+    .source-list { counter-reset: sources; list-style: none; padding: 0; }
+    .source-list li {
+      counter-increment: sources;
+      display: grid;
+      grid-template-columns: 34px 1fr;
+      gap: 8px;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--line);
+    }
+    .source-list li::before {
+      content: counter(sources, decimal-leading-zero);
+      color: var(--muted);
+      font-size: 0.78rem;
+      font-weight: 800;
+    }
+    .source-list li:last-child { border-bottom: 0; }
+
+    .footer-note { color: var(--muted); font-size: 0.86rem; }
+
+    @media (max-width: 920px) {
+      h1 { font-size: 2.4rem; }
+      .layout { grid-template-columns: 1fr; gap: 24px; }
+      .toc {
+        position: static;
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 2px 18px;
+        padding: 14px 0 20px;
+        border-right: 0;
+        border-bottom: 1px solid var(--line);
+      }
+      .toc strong { grid-column: 1 / -1; }
+      .summary-grid, .pair-grid, .architecture { grid-template-columns: 1fr; }
+      .sequence { grid-template-columns: 1fr; }
+      .sequence-step { min-height: 0; border-right: 0; border-bottom: 1px solid var(--line); }
+      .sequence-step:last-child { border-bottom: 0; }
+      .sequence-step::after { display: none; }
+    }
+
+    @media (max-width: 640px) {
+      .masthead-inner { padding: 38px 18px 34px; }
+      h1 { font-size: 2rem; }
+      .dek { font-size: 1.02rem; }
+      .verdict-inner { grid-template-columns: 1fr; gap: 8px; padding: 22px 18px; }
+      .layout { padding: 20px 18px 56px; }
+      .toc { grid-template-columns: repeat(2, 1fr); }
+      h2 { font-size: 1.62rem; }
+      .summary-grid, .responsibility-grid, .producer-grid, .tool-grid, .fix-grid { grid-template-columns: 1fr; }
+      .stack-row { grid-template-columns: 1fr; gap: 5px; }
+      .stack-row .blind { text-align: left; }
+      table { display: block; overflow-x: auto; white-space: normal; }
+      th, td { min-width: 150px; }
+      .diagram { padding: 12px; margin-left: -6px; margin-right: -6px; }
+    }
+
+    @media print {
+      body { background: white; font-size: 10pt; }
+      .topline, .toc { display: none; }
+      .masthead-inner, .verdict-inner, .layout { max-width: none; padding-left: 0; padding-right: 0; }
+      .layout { display: block; }
+      section { break-inside: avoid; }
+      .diagram, .panel, .pair-card { box-shadow: none; }
+      a { color: inherit; }
+      a::after { content: " (" attr(href) ")"; font-size: 8pt; }
+    }
+  </style>
+</head>
+<body>
+  <div class="topline"></div>
+  <header class="masthead">
+    <div class="masthead-inner">
+      <p class="eyebrow">Systems explainer and fix strategy</p>
+      <h1>Bose Multipoint Audio Lock</h1>
+      <p class="dek">Why a silent Firefox stream can block Spotify on an S25 Ultra, how a Mac changes the topology, what the current scripts actually do, and where a durable fix belongs.</p>
+      <div class="meta">
+        <span>Evidence collected: Windows Core Audio, Firefox, Spotify Connect, Android ADB</span>
+        <span>Research current: August 27, 2026</span>
+        <span>Target device: Bose QuietComfort Earbuds with multipoint</span>
+      </div>
+    </div>
+  </header>
+
+  <div class="verdict-band">
+    <div class="verdict-inner">
+      <div class="verdict-label">Current verdict</div>
+      <p class="verdict-text"><strong>The immediate lock is usually a real operating-system audio stream, not merely a Spotify UI mistake.</strong> Firefox has repeatedly kept an active but silent Windows stream on Bose. Bose then treats the laptop as a competing source and can send a Bluetooth pause command back to the S25. Spotify can trigger the state, but later YouTube and no-Spotify incidents prove Spotify is not the only possible initiator.</p>
+    </div>
+  </div>
+
+  <div class="layout">
+    <nav class="toc" aria-label="Document sections">
+      <strong>Contents</strong>
+      <a href="#short-answer">Short answer</a>
+      <a href="#topology">System topology</a>
+      <a href="#failure">Failure sequence</a>
+      <a href="#evidence">What we proved</a>
+      <a href="#ownership">Who owns what</a>
+      <a href="#public-record">Public record</a>
+      <a href="#tampermonkey">Tampermonkey</a>
+      <a href="#powershell">PowerShell tools</a>
+      <a href="#three-pairs">Three pairings</a>
+      <a href="#proper-fix">Proper fix</a>
+      <a href="#reporting">Reporting</a>
+      <a href="#next-incident">Next incident</a>
+      <a href="#sources">Sources</a>
+    </nav>
+
+    <main>
+      <section id="short-answer">
+        <p class="eyebrow">Executive summary</p>
+        <h2>The short answer</h2>
+        <p class="section-lead">This is a distributed state bug. Each component sees a different truth, and no component has enough context to correct the whole system.</p>
+
+        <div class="summary-grid">
+          <article class="panel">
+            <span class="kicker">Confirmed</span>
+            <h3>Windows sees a running stream</h3>
+            <p>Firefox has appeared on the Bose render endpoint as <code>Active</code> with a <code>0%</code> peak. Microsoft defines an active session as one with at least one running stream, even if its samples are silent.</p>
+          </article>
+          <article class="panel">
+            <span class="kicker">Confirmed</span>
+            <h3>Android is ready to play</h3>
+            <p>The S25 routed Spotify to Bose over A2DP and granted Spotify media focus. Playback then stopped after the earbuds delivered an AVRCP media-pause command.</p>
+          </article>
+          <article class="panel">
+            <span class="kicker">Strong inference</span>
+            <h3>Bose chooses the wrong owner</h3>
+            <p>The silent laptop stream remains a candidate in Bose's private source-arbitration logic. Starting phone playback does not reliably dislodge it, and the phone can be actively paused instead.</p>
+          </article>
+        </div>
+
+        <div class="callout">
+          <p><strong>Most accurate blame assignment:</strong> Firefox/Web Audio is the strongest upstream software target because it creates or preserves the silent stream. Bose firmware is the strongest hardware target because it lets a silent source defeat a newly audible source. Spotify is a contributing trigger and a useful place to release browser media, but it is not the complete root cause.</p>
+        </div>
+
+        <p>The earlier <code>AI Noise-cancelling Output (ASUS Utility)</code> incident was separate. Our PowerShell workaround intentionally moved Firefox away from Bose and accidentally left it on an inaudible virtual endpoint. That caused silent laptop playback, but it did not create the original multipoint lock.</p>
+      </section>
+
+      <section id="topology">
+        <p class="eyebrow">Connections, streams, and commands</p>
+        <h2>System topology</h2>
+        <p class="section-lead">"Connected" is not the same as "currently carrying audio." Multipoint keeps two Bluetooth source connections available, while Bose chooses only one media stream to render at a time.</p>
+
+        <div class="diagram">
+          <div class="diagram-title">Two active Bluetooth slots, three possible hosts</div>
+          <svg viewBox="0 0 940 430" role="img" aria-labelledby="topology-title topology-desc">
+            <title id="topology-title">Bose multipoint system topology</title>
+            <desc id="topology-desc">The S25 Ultra, Windows laptop, and optional Mac connect to Bose. Spotify Connect communicates over the internet separately from Bluetooth audio.</desc>
+            <defs>
+              <marker id="arrow-teal" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L0,6 L9,3 z" fill="#087f73"/></marker>
+              <marker id="arrow-blue" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L0,6 L9,3 z" fill="#2d62c7"/></marker>
+              <marker id="arrow-red" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L0,6 L9,3 z" fill="#b83a32"/></marker>
+            </defs>
+
+            <rect x="25" y="74" width="220" height="118" rx="8" fill="#ffffff" stroke="#99aaa3" stroke-width="2"/>
+            <circle cx="70" cy="111" r="20" fill="#dff3ef" stroke="#087f73" stroke-width="2"/>
+            <rect x="61" y="96" width="18" height="30" rx="3" fill="none" stroke="#087f73" stroke-width="2"/>
+            <circle cx="70" cy="121" r="1.5" fill="#087f73"/>
+            <text x="103" y="110" font-size="19" font-weight="700" fill="#172126">S25 Ultra</text>
+            <text x="48" y="151" font-size="14" fill="#59656b">Spotify Android + MediaSession</text>
+            <text x="48" y="174" font-size="14" fill="#59656b">A2DP source / AVRCP target</text>
+
+            <rect x="695" y="38" width="220" height="136" rx="8" fill="#ffffff" stroke="#99aaa3" stroke-width="2"/>
+            <rect x="722" y="67" width="43" height="29" rx="3" fill="none" stroke="#2d62c7" stroke-width="2"/>
+            <line x1="716" y1="101" x2="771" y2="101" stroke="#2d62c7" stroke-width="2"/>
+            <text x="785" y="85" font-size="19" font-weight="700" fill="#172126">Zephyrus</text>
+            <text x="718" y="127" font-size="14" fill="#59656b">Firefox / Spotify Web</text>
+            <text x="718" y="150" font-size="14" fill="#59656b">Core Audio + A2DP source</text>
+
+            <rect x="695" y="256" width="220" height="136" rx="8" fill="#ffffff" stroke="#99aaa3" stroke-width="2" stroke-dasharray="7 6"/>
+            <rect x="722" y="285" width="43" height="29" rx="3" fill="none" stroke="#b83a32" stroke-width="2"/>
+            <line x1="716" y1="319" x2="771" y2="319" stroke="#b83a32" stroke-width="2"/>
+            <text x="785" y="303" font-size="19" font-weight="700" fill="#172126">Work Mac</text>
+            <text x="718" y="345" font-size="14" fill="#59656b">Browser / native media apps</text>
+            <text x="718" y="368" font-size="14" fill="#59656b">Core Audio + A2DP source</text>
+
+            <circle cx="470" cy="226" r="97" fill="#263238"/>
+            <path d="M425 208 C425 166 515 166 515 208" fill="none" stroke="#8fe0d2" stroke-width="12" stroke-linecap="round"/>
+            <rect x="411" y="205" width="24" height="63" rx="11" fill="#8fe0d2"/>
+            <rect x="505" y="205" width="24" height="63" rx="11" fill="#8fe0d2"/>
+            <text x="470" y="299" text-anchor="middle" font-size="18" font-weight="700" fill="#ffffff">Bose QC</text>
+            <text x="470" y="321" text-anchor="middle" font-size="13" fill="#d5dedb">2 connected / 1 audible</text>
+
+            <path d="M245 127 C332 126 346 164 381 191" fill="none" stroke="#087f73" stroke-width="4" marker-end="url(#arrow-teal)"/>
+            <text x="284" y="116" font-size="13" font-weight="700" fill="#087f73">A2DP audio</text>
+            <path d="M381 225 C331 231 290 207 245 174" fill="none" stroke="#b83a32" stroke-width="3" marker-end="url(#arrow-red)"/>
+            <text x="271" y="248" font-size="13" font-weight="700" fill="#b83a32">AVRCP play/pause</text>
+
+            <path d="M695 108 C609 111 588 155 559 188" fill="none" stroke="#087f73" stroke-width="4" marker-end="url(#arrow-teal)"/>
+            <text x="582" y="101" font-size="13" font-weight="700" fill="#087f73">A2DP audio</text>
+            <path d="M695 317 C612 317 591 284 558 258" fill="none" stroke="#99aaa3" stroke-width="4" stroke-dasharray="8 7" marker-end="url(#arrow-teal)"/>
+            <text x="590" y="342" font-size="13" font-weight="700" fill="#59656b">optional slot</text>
+
+            <path d="M245 79 C405 20 547 17 695 73" fill="none" stroke="#2d62c7" stroke-width="3" stroke-dasharray="8 7" marker-end="url(#arrow-blue)"/>
+            <text x="470" y="35" text-anchor="middle" font-size="14" font-weight="700" fill="#2d62c7">Spotify Connect control plane over internet / LAN</text>
+
+            <rect x="306" y="369" width="328" height="40" rx="4" fill="#fae7e4" stroke="#b83a32"/>
+            <text x="470" y="394" text-anchor="middle" font-size="14" font-weight="700" fill="#8f2b25">A third host entering displaces one of Bose's two connections</text>
+          </svg>
+          <div class="legend">
+            <span>Bluetooth media stream</span>
+            <span class="control">Control or Spotify Connect state</span>
+            <span class="optional">Optional third host / displaced slot</span>
+          </div>
+        </div>
+
+        <h3>The four state planes</h3>
+        <div class="stack">
+          <div class="stack-row"><strong>Spotify Connect</strong><span class="sees">Which Spotify device is selected and the account-level playback state.</span><span class="blind">Cannot see Bose ownership</span></div>
+          <div class="stack-row"><strong>Browser media</strong><span class="sees">HTML media, Media Session, Web Audio, tab-audible flags.</span><span class="blind">Cannot prove OS stream closure</span></div>
+          <div class="stack-row"><strong>OS audio</strong><span class="sees">Process, endpoint, stream state, mute, peak level, routing.</span><span class="blind">Cannot see Bose firmware policy</span></div>
+          <div class="stack-row"><strong>Bluetooth / Bose</strong><span class="sees">Connected sources, A2DP streams, AVRCP controls, private priority rules.</span><span class="blind">No public arbitration telemetry</span></div>
+        </div>
+
+        <p>Spotify Connect can correctly say <em>Raj's S25 Ultra</em> while Firefox still owns an unrelated Windows audio stream. Likewise, a Firefox tab can show no speaker icon while the Firefox parent process retains a running Core Audio stream.</p>
+      </section>
+
+      <section id="failure">
+        <p class="eyebrow">How the failure unfolds</p>
+        <h2>The lock sequence</h2>
+        <p class="section-lead">The failure needs no audible laptop sound. It only needs the laptop side to remain meaningful to Bose's arbitration logic.</p>
+
+        <div class="sequence" aria-label="Failure sequence">
+          <div class="sequence-step"><span class="num">1</span><h4>Browser opens audio</h4><p>Spotify, YouTube, WebRTC, or another page causes Firefox to create a cubeb/WASAPI stream.</p></div>
+          <div class="sequence-step"><span class="num">2</span><h4>Page goes quiet</h4><p>Playback transfers, pauses, closes, or produces silence. Browser-visible state may look released.</p></div>
+          <div class="sequence-step"><span class="num">3</span><h4>OS stream persists</h4><p>Windows still reports Firefox <code>Active</code> on Bose while the peak meter remains at zero.</p></div>
+          <div class="sequence-step"><span class="num">4</span><h4>Phone starts</h4><p>Spotify receives Android audio focus and starts on the Bose A2DP route.</p></div>
+          <div class="sequence-step"><span class="num">5</span><h4>Bose rejects handoff</h4><p>Bose retains or reclaims the laptop source and can send AVRCP pause to the phone.</p></div>
+        </div>
+
+        <div class="callout danger">
+          <p><strong>The misleading condition:</strong> <code>page paused</code> + <code>Spotify Connect says phone</code> + <code>no audible tab</code> does not imply <code>Windows stream stopped</code>, and none of those imply <code>Bose selected phone</code>.</p>
+        </div>
+
+        <h3>Why Bose can hear "silence" as activity</h3>
+        <p>A digital audio stream can be running while every sample is zero. Windows correctly labels that stream active because it is running, not because a human can hear it. Multipoint firmware must decide whether to trust connection state, stream state, actual non-silence, AVRCP playback state, or some mixture. Public Bose documentation describes the user contract only as "pause the first device, then play the second"; it does not document the internal arbitration algorithm.</p>
+        <p>This failure mode is not Bose-specific. Other headset documentation explicitly warns that a connected source may continue sending a silent signal after playback stops, preventing a switch to the second source. That makes the bug class well known even though the exact Bose implementation is private.</p>
+
+        <h3>Where the zero-output stream can originate</h3>
+        <p>The Windows peak measurement proves that Firefox's endpoint output was silent during the samples; it does not yet identify the content object that kept Firefox's callback running. Mozilla's own bugs identify three concrete producer families.</p>
+        <div class="producer-grid">
+          <article class="panel"><span class="kicker">Leading candidate</span><h3>Running Web Audio graph</h3><p>A site creates an <code>AudioContext</code>. Its nodes later produce zero output because sources ended, outputs were disconnected, or gain became zero, but the context was never suspended or closed. Firefox keeps the <code>AudioDestinationNode</code>, <code>MediaTrackGraph</code>, audio callback driver, and cubeb stream running. Mozilla <a href="https://bugzilla.mozilla.org/show_bug.cgi?id=1771179">bug 1771179</a> is specifically about pausing that system stream after sustained silence.</p></article>
+          <article class="panel"><span class="kicker">Second candidate</span><h3>Paused media element</h3><p>A normal <code>&lt;audio&gt;</code> or <code>&lt;video&gt;</code> element pauses, but its Firefox playback/cubeb stream remains open. <a href="https://bugzilla.mozilla.org/show_bug.cgi?id=1959613">Bug 1959613</a> reports this exact Windows behavior after pausing YouTube. This path fits the YouTube incidents without requiring Web Audio.</p></article>
+          <article class="panel"><span class="kicker">Other graph owner</span><h3>MediaStream or WebRTC</h3><p>A <code>MediaStream</code>, peer connection, captured element, or audio-processing graph can keep <code>MediaTrackGraph</code> active even when its rendered output is silent. Mozilla explicitly includes MediaStream-driven graph processing in the scope of its AudioContext power work.</p></article>
+        </div>
+        <div class="callout">
+          <p><strong>Current boundary of proof:</strong> we know the silent stream belongs to Firefox and that moving Firefox off Bose removes it. We do not yet know which of these three content paths created each incident. The next trace is designed to make that attribution.</p>
+        </div>
+      </section>
+
+      <section id="evidence">
+        <p class="eyebrow">Observed on this setup</p>
+        <h2>What we proved</h2>
+        <p class="section-lead">The strongest findings came from correlating Windows and Android at the same time, then changing only one variable.</p>
+
+        <div class="evidence-log" aria-label="Representative diagnostic evidence">
+          <span class="risk">WINDOWS  LOCK_RISK  Headphones (Bose QuietComfort Earbuds)</span><br>
+          &nbsp;&nbsp;firefox pid=22724 state=Active peak=0%<br><br>
+          <span class="event">ANDROID  Spotify requested media audio focus</span><br>
+          <span class="event">ANDROID  Spotify player started on Bose A2DP</span><br>
+          <span class="event">ANDROID  Bose delivered KEYCODE_MEDIA_PAUSE</span><br>
+          <span class="event">ANDROID  Spotify transitioned to paused</span><br><br>
+          <span class="clear">CONTROL  Route Firefox away from Bose -> CLEAR</span><br>
+          <span class="risk">CONTROL  Restore Firefox to Bose -> LOCK_RISK returns</span>
+        </div>
+
+        <table>
+          <thead><tr><th>Observation</th><th>Status</th><th>Meaning</th></tr></thead>
+          <tbody>
+            <tr><td>Firefox parent process was <code>Active</code> at <code>0%</code> on Bose.</td><td><span class="status confirmed">Confirmed</span></td><td>A real running Windows stream existed even without audible output.</td></tr>
+            <tr><td>Firefox exposed no audible tab during at least one captured lock.</td><td><span class="status confirmed">Confirmed</span></td><td>Tab indicators were insufficient to identify or refute the OS stream.</td></tr>
+            <tr><td>Android routed Spotify to Bose and held normal media focus.</td><td><span class="status confirmed">Confirmed</span></td><td>The phone did not mistakenly choose its own speaker or another app.</td></tr>
+            <tr><td>Bose sent media pause immediately after phone playback began.</td><td><span class="status confirmed">Confirmed</span></td><td>The phone stopped in response to an external Bluetooth command.</td></tr>
+            <tr><td>Routing Firefox away removed the Bose session; restoring it recreated the lock.</td><td><span class="status confirmed">Confirmed</span></td><td>The laptop stream was causal and controllable below the browser.</td></tr>
+            <tr><td>The same symptom later occurred without Spotify open.</td><td><span class="status confirmed">Confirmed</span></td><td>Spotify is not a necessary condition; Firefox or another media page can initiate it.</td></tr>
+            <tr><td>Bose's exact internal decision rule.</td><td><span class="status unknown">Unknown</span></td><td>Firmware exposes no public log proving why it selected one source.</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section id="ownership">
+        <p class="eyebrow">Responsibility map</p>
+        <h2>Who owns which part?</h2>
+        <div class="responsibility-grid">
+          <article class="panel">
+            <span class="kicker">Spotify</span>
+            <h3>Contributing trigger</h3>
+            <p>The Web Player is a Spotify Connect device and may keep browser media machinery alive after transferring playback. It should suspend or close no-longer-needed Web Audio/media resources. But locks without Spotify rule it out as the sole owner.</p>
+          </article>
+          <article class="panel">
+            <span class="kicker">Firefox / cubeb</span>
+            <h3>Strongest software owner</h3>
+            <p>Firefox turns page media graphs into OS streams. Mozilla already tracks a high-impact Web Audio defect for needlessly active silent <code>AudioContext</code> graphs and a separate Windows defect where a paused stream remains open.</p>
+          </article>
+          <article class="panel">
+            <span class="kicker">Windows</span>
+            <h3>Mostly the messenger</h3>
+            <p>Windows reports an audio session active while one or more streams are running. Our measurements match the documented contract. Windows routing APIs can mitigate the problem, but Windows did not invent the Firefox stream.</p>
+          </article>
+          <article class="panel">
+            <span class="kicker">Bose firmware</span>
+            <h3>Strongest hardware owner</h3>
+            <p>Bose owns source arbitration and AVRCP behavior. A resilient implementation should prefer newly non-silent playback over indefinitely silent streams, apply hysteresis, and avoid pausing the source that is actually producing content.</p>
+          </article>
+          <article class="panel">
+            <span class="kicker">Android / S25</span>
+            <h3>Low suspicion</h3>
+            <p>The phone requested focus, selected Bose, and began playback. It then obeyed a legitimate external pause command. A companion app can observe and coordinate this state, but Android is not where the captured failure began.</p>
+          </article>
+          <article class="panel">
+            <span class="kicker">Mac</span>
+            <h3>Another possible source</h3>
+            <p>A Mac can create the same category of stale Bluetooth audio stream. It also competes for one of Bose's two connection slots. Core Audio can inspect and route process audio, but it cannot expose Bose's private multipoint decision.</p>
+          </article>
+        </div>
+      </section>
+
+      <section id="public-record">
+        <p class="eyebrow">Known in production</p>
+        <h2>Has somebody already solved it?</h2>
+        <p class="section-lead"><strong>The failure is known; the general cross-device problem is not solved.</strong> There are exact public matches, an open Mozilla engineering trail, and many device-specific workarounds. There is no mature utility that reliably arbitrates S25 + Windows + Mac at the application-stream level.</p>
+
+        <table>
+          <thead><tr><th>Public evidence</th><th>How closely it matches</th><th>Resolution</th></tr></thead>
+          <tbody>
+            <tr><td><a href="https://bugzilla.mozilla.org/show_bug.cgi?id=1771179">Mozilla 1771179: AudioContext power optimizations</a></td><td>Firefox can keep a system audio stream active for silent Web Audio graphs; Mozilla calls it reproducible, multi-site, and high performance impact.</td><td><span class="status open">Open / NEW</span></td></tr>
+            <tr><td><a href="https://bugzilla.mozilla.org/show_bug.cgi?id=1959613">Mozilla 1959613: Audio stream remains open when playback paused</a></td><td>Windows reproduction: play and pause YouTube in Firefox, then another WASAPI client cannot use the device.</td><td><span class="status open">Unconfirmed</span></td></tr>
+            <tr><td><a href="https://www.reddit.com/r/firefox/comments/rroik2/win10_ff_keeping_the_audio_focus_on_mulitpoint/">Firefox multipoint report from 2021</a></td><td>Phone cannot take over after Firefox stops; no audible tabs; closing Firefox releases it.</td><td>No published fix</td></tr>
+            <tr><td><a href="https://www.reddit.com/r/bose/comments/1esytnv/multipoint_while_windows_is_muted/">Bose: multipoint while Windows is muted</a></td><td>Muted Windows activity takes "Active Stream" from phone and returns silence.</td><td>Users disconnect PC or disable multipoint</td></tr>
+            <tr><td><a href="https://www.reddit.com/r/bose/comments/1d9w1j0/bose_qc_ultra_multipoint_issue/">Bose QC Ultra phone pauses after a split second</a></td><td>Laptop is paused; phone Spotify begins briefly and immediately pauses. Windows, Mac, Android, and iPhone variants appear in replies.</td><td>Manual disconnect is common</td></tr>
+            <tr><td><a href="https://support.bose.com/s/article/connecting-a-bluetooth-device-quietcomfort-earbuds?language=en_US">Bose's official contract</a></td><td>Two connected devices, one audible source; pause first, then play second.</td><td>Official fallback: disable multipoint</td></tr>
+          </tbody>
+        </table>
+
+        <h3>Closest existing software found</h3>
+        <table>
+          <thead><tr><th>Project</th><th>What it solves</th><th>Why it is not the complete answer</th></tr></thead>
+          <tbody>
+            <tr><td><a href="https://github.com/Felip6499/PodSwitch">PodSwitch</a></td><td>The closest cross-platform match. It watches for local playback on macOS, Android, and Windows, then force-connects single-point headphones to that host.</td><td>It replaces multipoint arbitration with reconnects. The author documents a hidden Android method and a slower Windows audio-service toggle, so it is a useful architecture reference rather than a clean public-API solution.</td></tr>
+            <tr><td><a href="https://github.com/File-New-Project/EarTrumpet">EarTrumpet</a></td><td>Mature Windows per-app volume and endpoint routing, using the same family of Windows audio-policy capabilities proven by our PowerShell prototype.</td><td>Windows-only and user-driven. It does not coordinate phone/Mac playback intent or diagnose Bose source ownership.</td></tr>
+            <tr><td><a href="https://www.semper.systems/">Semper</a></td><td>Open-source macOS per-process volume and routing built on modern Core Audio process taps.</td><td>As of July 2026 it has source and build instructions but no packaged public release, and it does not coordinate Bluetooth multipoint across hosts.</td></tr>
+          </tbody>
+        </table>
+
+        <p><strong>Bottom line:</strong> there are reusable pieces and one recent project with the right cross-platform shape, but no established tool found that preserves Bose multipoint, detects stale process streams on both computers, incorporates Android playback intent, and safely restores routes across all three of your pairings.</p>
+
+        <h3>Why it can remain unfixed despite being common</h3>
+        <ul class="plain-list">
+          <li><strong>No single vendor owns the full trace.</strong> Spotify sees Connect, Firefox sees a media graph, Windows sees a stream, Android sees a media key, and Bose sees two Bluetooth sources.</li>
+          <li><strong>Every layer can claim local correctness.</strong> A silent Web Audio graph may still be valid; Windows correctly calls a running stream active; Android correctly obeys pause; Bose may treat stream presence as user intent.</li>
+          <li><strong>Reproduction is hardware- and timing-sensitive.</strong> It depends on firmware, browser audio graph type, pause/transfer timing, and which two devices occupy the slots.</li>
+          <li><strong>Support systems fragment the reports.</strong> Users file under Spotify, Firefox, Windows, Bluetooth, or Bose, preventing one issue from accumulating all evidence.</li>
+          <li><strong>The workarounds reduce perceived severity.</strong> Closing Firefox, disconnecting a host, toggling output, or disabling multipoint all work, even though they defeat the feature.</li>
+        </ul>
+
+        <div class="callout warning">
+          <p><strong>Closest thing to a universal workaround:</strong> turn off multipoint and explicitly connect only the source you want. That is reliable because it removes arbitration entirely, but it is not a repair of multipoint.</p>
+        </div>
+      </section>
+
+      <section id="tampermonkey">
+        <p class="eyebrow">Browser-level mitigation</p>
+        <h2>What Tampermonkey v1.1.1 does</h2>
+        <p class="section-lead">The userscript is useful because it can fix stale state that actually lives in the Spotify page. It becomes unreliable when the authoritative state has moved below the page.</p>
+
+        <div class="tool-grid">
+          <article class="panel">
+            <span class="kicker">It can</span>
+            <ul>
+              <li>Observe Spotify's Connect panel and remember the selected device.</li>
+              <li>Detect local HTML audio/video elements and pause stale playback.</li>
+              <li>Set the browser Media Session playback state to <code>none</code>.</li>
+              <li>Force a recovery transition: browser, then S25 Ultra.</li>
+              <li>Verify Connect selection, retry failures, and expose diagnostics.</li>
+            </ul>
+          </article>
+          <article class="panel">
+            <span class="kicker">It cannot</span>
+            <ul>
+              <li>Enumerate or stop Firefox's Windows Core Audio streams.</li>
+              <li>Inspect other tabs, other Firefox windows, or native applications.</li>
+              <li>Know which source Bose currently renders.</li>
+              <li>Observe AVRCP commands delivered to Android.</li>
+              <li>Control Windows, macOS, or Bose Bluetooth routing.</li>
+            </ul>
+          </article>
+        </div>
+
+        <h3>Why the manual Release button often works</h3>
+        <p>The button forces a real Spotify Connect transition from <em>This web browser</em> to <em>Raj's S25 Ultra</em>. That tears down or recreates enough Spotify/Firefox state to make Bose reconsider the source. It is not merely toggling a label.</p>
+
+        <h3>Why auto-release is intrinsically less reliable</h3>
+        <p>The automatic logic infers hardware ownership from DOM observations that are delayed, transient, and incomplete. Even perfect Spotify selectors would not tell it whether Firefox's parent audio stream remains active. A browser extension could inspect all tabs and use Native Messaging, but the native helper would still perform the decisive detection and recovery.</p>
+      </section>
+
+      <section id="powershell">
+        <p class="eyebrow">Windows-native prototypes</p>
+        <h2>What the recent PowerShell tools do</h2>
+
+        <table>
+          <thead><tr><th>Tool</th><th>Function</th><th>Important limitation</th></tr></thead>
+          <tbody>
+            <tr><td><code>Watch-BoseAudioLock.ps1</code></td><td>Uses Windows Core Audio COM interfaces to enumerate render endpoints and process sessions, reporting state and peak.</td><td><code>LOCK_RISK</code> is our diagnostic label, not an official Bose/Windows state.</td></tr>
+            <tr><td><code>Bose-Diagnose-Lock.cmd</code></td><td>Captures every Bose endpoint session and copies a privileged Firefox Browser Console audit.</td><td>Firefox can still expose no tab-level owner while its parent stream is active.</td></tr>
+            <tr><td><code>Reset-BoseAudioLock.ps1 -Mode Phone</code></td><td>Uses Windows' persisted per-process endpoint policy to move Firefox/Spotify away from Bose.</td><td>The route persists and affects every Firefox tab; the fallback can be a virtual output.</td></tr>
+            <tr><td><code>Reset-BoseAudioLock.ps1 -Mode Laptop</code></td><td>Clears the per-app override so Firefox follows the Windows default again.</td><td>Restoring Bose can recreate the stale stream if Firefox still owns it.</td></tr>
+          </tbody>
+        </table>
+
+        <div class="callout danger">
+          <p><strong>Known prototype flaw:</strong> when no Realtek speaker endpoint was active, Phone mode selected <code>AI Noise-cancelling Output (ASUS Utility)</code>. That reliably freed Bose, but later Firefox playback was inaudible until Laptop mode cleared the persistent route. A production tool must reject virtual/unusable fallbacks and automatically restore routes based on explicit intent.</p>
+        </div>
+
+        <h3>Why routing works so reliably</h3>
+        <p>It invalidates the exact object Bose cares about: Firefox's stream on the Bose endpoint. Unlike a DOM pause, it is observable at the operating-system boundary. The current implementation uses the same internal Windows audio-policy family used by volume-mixer tools. Monitoring relies on documented Core Audio interfaces; persisted per-app endpoint assignment is less formally supported and may need maintenance after Windows updates.</p>
+      </section>
+
+      <section id="three-pairs">
+        <p class="eyebrow">Pairing combinations</p>
+        <h2>The three two-device configurations</h2>
+
+        <div class="pair-grid">
+          <article class="pair-card"><span class="pair">S25 + Windows</span><p><strong>Best-instrumented case.</strong> Windows can identify the owning process and route it away. Android can expose Spotify/MediaSession and A2DP playing state. This is where the current scripts work.</p></article>
+          <article class="pair-card"><span class="pair">S25 + Work Mac</span><p><strong>Same class, different native layer.</strong> A Mac app must use Core Audio process taps/listeners and default-device APIs. The Tampermonkey logic can still help Spotify, but Windows scripts are irrelevant.</p></article>
+          <article class="pair-card"><span class="pair">Windows + Work Mac</span><p><strong>Two desktop contenders.</strong> Either browser can hold a silent stream. A coordinator must choose the machine with genuine audible intent and release the other host.</p></article>
+        </div>
+
+        <h3>What happens when all three are nearby</h3>
+        <p>Bose accepts only two simultaneous source connections. When the third host joins, one existing host is displaced according to Bose's recency/device-list policy. A cross-platform tool therefore needs two separate concepts:</p>
+        <ol>
+          <li><strong>Connection membership:</strong> which two hosts are connected to Bose?</li>
+          <li><strong>Media ownership:</strong> which connected host is allowed to render audio now?</li>
+        </ol>
+        <p>No browser script can manage either concept across all three hosts. A native system can coordinate intent, but Bose still owns the final two-slot membership unless the tool explicitly connects or disconnects Bluetooth profiles.</p>
+      </section>
+
+      <section id="proper-fix">
+        <p class="eyebrow">Durable resolution</p>
+        <h2>What a proper fix looks like</h2>
+
+        <h3>Upstream fixes, in priority order</h3>
+        <div class="fix-grid">
+          <article class="panel"><span class="kicker">1. Firefox</span><p>Pause the underlying system stream after a bounded period of Web Audio silence, while preserving graph time with a non-audio clock. Mozilla bug 1771179 already proposes this class of optimization and notes Chromium stops after about 35 seconds in the tested case.</p></article>
+          <article class="panel"><span class="kicker">2. Bose</span><p>Make source arbitration silence-aware: require actual non-silent samples or strong playback intent, apply a short debounce, and let newly audible media preempt an indefinitely silent source without pausing the new source.</p></article>
+          <article class="panel"><span class="kicker">3. Spotify</span><p>On Connect transfer away from the Web Player, explicitly suspend/close obsolete Web Audio contexts and media tracks, then verify resource release rather than only account-level device state.</p></article>
+          <article class="panel"><span class="kicker">4. Better diagnostics</span><p>Expose source ownership and last-switch reason in the Bose app; expose Firefox audio graph ownership by tab/process; expose Spotify Web Player resource state. Visibility would make cross-vendor triage much faster.</p></article>
+        </div>
+
+        <h3>Practical local product: a three-agent arbiter</h3>
+        <p>A local solution cannot rewrite Bose firmware, but it can prevent stale computer streams from entering the arbitration contest.</p>
+
+        <div class="architecture">
+          <article class="agent"><h4>Windows agent</h4><p>Core Audio session notifications, endpoint peak, process attribution, safe per-app routing, route restoration, tray status.</p></article>
+          <article class="agent"><h4>Android agent</h4><p>Enabled notification listener for active MediaSessions, A2DP playing/connection broadcasts, user playback intent, optional Spotify Connect context.</p></article>
+          <article class="agent"><h4>macOS agent</h4><p>Core Audio process taps and listeners, process attribution, default output control, safe app routing on supported macOS versions.</p></article>
+        </div>
+        <div class="coordinator"><strong>Local coordinator over authenticated LAN messaging</strong><br>Maintains connected pair, active source intent, cooldowns, manual override, and an incident log.</div>
+
+        <h3>Required policy guardrails</h3>
+        <ul>
+          <li>Do not infer intent from "session active" alone. Combine playback state, non-silent peak, recent user action, and Bluetooth playing state.</li>
+          <li>Classify <code>Active + peak 0</code> beyond a short grace period as stale risk, not as audible ownership.</li>
+          <li>Never persistently route an app to a virtual or unverified endpoint without explicit consent.</li>
+          <li>Restore desktop routing automatically when the user begins real desktop playback.</li>
+          <li>Use hysteresis so two agents do not repeatedly steal Bose from each other.</li>
+          <li>Keep a manual "Use phone / Use Windows / Use Mac" override because private Bluetooth policy will always produce edge cases.</li>
+          <li>Capture evidence before recovery. Detection and remediation must be separate actions.</li>
+        </ul>
+
+        <div class="callout">
+          <p><strong>Recommended implementation path:</strong> first ship a safe Windows tray agent that replaces the two PowerShell modes and never selects an invalid fallback. Then add a macOS menu-bar agent using Core Audio process taps. Add the Android observer last, once desktop state transitions and the coordination protocol are stable.</p>
+        </div>
+      </section>
+
+      <section id="reporting">
+        <p class="eyebrow">Escalation strategy</p>
+        <h2>Where and how to report it</h2>
+        <p class="section-lead">File the same incident evidence in three places, but tailor the claim to the layer each vendor owns.</p>
+
+        <div class="route"><div class="route-num">1</div><div><h4>Mozilla Bugzilla: primary engineering report</h4><p>Comment on or reference <a href="https://bugzilla.mozilla.org/show_bug.cgi?id=1771179">1771179</a> and <a href="https://bugzilla.mozilla.org/show_bug.cgi?id=1959613">1959613</a>. A new focused bug may be appropriate if we capture a reproducible multipoint case with a Firefox media profile and Core Audio state. Component: <em>Core / Web Audio</em> when an AudioContext is implicated, or <em>Core / Audio/Video: cubeb</em> for a retained paused media stream.</p></div></div>
+        <div class="route"><div class="route-num">2</div><div><h4>Bose Support: firmware arbitration report</h4><p>Use the QuietComfort Earbuds support page's <a href="https://support.bose.com/s/article/quietcomfort-earbuds-no-audio-from-product">Contact Us</a> flow. Include firmware version, connected pair, exact pause/play sequence, and the Android evidence that an AVRCP pause arrived from the earbuds while Windows had a silent active stream.</p></div></div>
+        <div class="route"><div class="route-num">3</div><div><h4>Spotify Community: product report, not a public code tracker</h4><p>Spotify has no public general-client bug tracker comparable to Bugzilla. The official route is to search or start a Help topic; popular/reproducible reports are moved to <a href="https://community.spotify.com/t5/Ongoing-Issues/idb-p/ongoing_issues">Ongoing Issues</a>. Spotify replaced its Web API/Web Playback SDK GitHub trackers with the Developer Community in 2020, but that forum is for SDK consumers, not the first-party Web Player.</p></div></div>
+        <div class="route"><div class="route-num">4</div><div><h4>Microsoft Feedback Hub: supporting report only</h4><p>Use it if Windows keeps the session active after Firefox is fully terminated, misattributes the process, or fails to stop a stream Firefox has actually closed. Current evidence instead shows Windows accurately reporting Firefox's running stream.</p></div></div>
+
+        <details>
+          <summary>Proposed Mozilla issue title and body</summary>
+          <div><div class="template">Title: Silent Firefox audio stream on Windows blocks Bluetooth multipoint handoff after playback stops
+
+Environment:
+- Windows 11, Firefox [exact version]
+- Bose QuietComfort Earbuds [firmware]
+- Second source: Samsung S25 Ultra
+
+Steps:
+1. Connect Bose to Windows and S25 using multipoint.
+2. Play media in Firefox, then stop/transfer/close the media page.
+3. Confirm no Firefox tab is marked audible.
+4. Start Spotify on the S25.
+
+Actual:
+- Windows IAudioSessionControl reports the Firefox parent session Active on the Bose endpoint with peak 0.
+- The S25 begins A2DP playback, then receives KEYCODE_MEDIA_PAUSE over Bluetooth.
+- Closing Firefox or moving Firefox to another endpoint releases Bose immediately.
+
+Expected:
+- After no Firefox graph produces audio, the underlying cubeb/WASAPI stream should stop within a bounded timeout so a second multipoint source can play.
+
+Attachments:
+- Firefox media profile covering the stop-to-lock transition
+- about:support
+- Core Audio session log
+- Browser Console tab-audio audit
+- Android Bluetooth/MediaSession log</div></div>
+        </details>
+
+        <details>
+          <summary>Proposed Bose support summary</summary>
+          <div><div class="template">QuietComfort multipoint does not switch to a newly audible phone source when the Windows source has an active but silent A2DP stream. The phone starts Spotify correctly, but the earbuds send AVRCP PAUSE back to Android within approximately 0.2-0.6 seconds. Moving the Windows process off the Bose endpoint immediately fixes the handoff; restoring the silent Windows stream recreates it. Please escalate as source-arbitration firmware behavior and provide an incident/reference number.</div></div>
+        </details>
+
+        <details>
+          <summary>Proposed Spotify Community summary</summary>
+          <div><div class="template">When Spotify Connect playback transfers from Firefox Web Player on Windows 11 to Spotify on Android, the web player can appear released while Firefox retains an active silent audio session on the Bose Bluetooth endpoint. Bose multipoint then pauses Android playback. Please investigate whether the first-party Web Player suspends/closes its Web Audio/media resources after Connect transfer. This also occurs with other Firefox media in some incidents, so Spotify may be a trigger rather than the sole root cause.</div></div>
+        </details>
+      </section>
+
+      <section id="next-incident">
+        <p class="eyebrow">Preserve the evidence</p>
+        <h2>Next-incident protocol</h2>
+        <p class="section-lead">Do not release or reroute first. A lock is most valuable while it is still present.</p>
+        <ol>
+          <li>Freeze the state: do not press Release, reroute audio, close tabs, restart Firefox, or start laptop playback.</li>
+          <li>Run <code>Bose-Diagnose-Lock.cmd</code>. It now samples every Bose session for 15 seconds and saves session-instance IDs plus per-channel peaks under <code>%TEMP%\BoseAudioLock\&lt;timestamp&gt;</code>.</li>
+          <li>Open Firefox's <strong>Parent process Browser Console</strong>, run the copied audit, and save its JSON. It now records each tab's privileged <code>MediaController</code> state and all content PIDs.</li>
+          <li>Open the <code>about:logging</code> URL in the incident's <code>next-steps.txt</code>. Start logging, leave the laptop silent for 10 seconds, try phone playback once, wait 5 seconds, then stop and save the local Firefox profile.</li>
+          <li>With ADB wireless debugging connected, capture Android Bluetooth, AudioManager, and MediaSession state during that one phone play attempt.</li>
+          <li>After the spontaneous evidence is safe, isolate the owner by closing the highest-signal tab while the native monitor runs. A Bose session transition to <code>Inactive</code> identifies the owner; reopening/reproducing with Firefox logging already armed captures the creation call.</li>
+          <li>Only then use Phone mode, the Tampermonkey Release button, or a Bluetooth disconnect.</li>
+        </ol>
+
+        <div class="callout danger">
+          <p><strong>Why two captures:</strong> a profiler started after the lock can see ongoing graph/cubeb work, but may miss the earlier <code>new AudioContext()</code> or media <code>play()</code> call. Preserve the spontaneous incident first, then reproduce once with logging armed before the transition.</p>
+        </div>
+
+        <h3>Minimal isolation matrix</h3>
+        <table>
+          <thead><tr><th>Test</th><th>If it locks</th><th>Primary owner indicated</th></tr></thead>
+          <tbody>
+            <tr><td>Spotify Web in Firefox -> S25 Spotify</td><td>Firefox stream remains active</td><td>Spotify Web and/or Firefox Web Audio</td></tr>
+            <tr><td>YouTube in Firefox -> S25 Spotify</td><td>Firefox stream remains active</td><td>Firefox media/cubeb, not Spotify-specific</td></tr>
+            <tr><td>Spotify Web in Chromium -> S25 Spotify</td><td>Chromium stream remains active</td><td>Spotify Web or Bose, less likely Firefox</td></tr>
+            <tr><td>Native Spotify Windows -> S25 Spotify</td><td>Spotify.exe remains active</td><td>Spotify native client or Bose</td></tr>
+            <tr><td>Same tests on Mac + S25</td><td>Core Audio process stays active</td><td>Site/app behavior or Bose; compare browser results</td></tr>
+            <tr><td>No desktop stream, phone still pauses</td><td>Bose has no competing A2DP source</td><td>Bose firmware or Android path</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section id="sources">
+        <p class="eyebrow">References</p>
+        <h2>Primary sources and matching reports</h2>
+        <ol class="source-list">
+          <li><span><a href="https://support.bose.com/s/article/connecting-a-bluetooth-device-quietcomfort-earbuds?language=en_US">Bose: Connecting QuietComfort Earbuds</a> - two active connections, one audible source.</span></li>
+          <li><span><a href="https://assets.bose.com/content/dam/Bose_DAM/Web/consumer_electronics/global/products/headphones/qcearb24-headphonein/pdf/891405_OG_QCEARB24-HEADPHONEIN_EN.pdf">Bose QuietComfort Earbuds owner guide</a> - official pause-first, play-second switching sequence.</span></li>
+          <li><span><a href="https://learn.microsoft.com/en-us/windows/win32/api/audiopolicy/nf-audiopolicy-iaudiosessioncontrol-getstate">Microsoft: IAudioSessionControl::GetState</a> - active means one or more running streams.</span></li>
+          <li><span><a href="https://learn.microsoft.com/en-us/windows-hardware/design/accessory-guidelines/bluetooth-accessory-guidelines/bluetooth-accessory-guidelines-classic-audio">Microsoft: Bluetooth Classic audio accessory guidance</a> - A2DP and AVRCP play/pause roles.</span></li>
+          <li><span><a href="https://bugzilla.mozilla.org/show_bug.cgi?id=1771179">Mozilla bug 1771179</a> - active silent AudioContext power optimization, open.</span></li>
+          <li><span><a href="https://bugzilla.mozilla.org/show_bug.cgi?id=1959613">Mozilla bug 1959613</a> - audio stream remains open when playback is paused, open.</span></li>
+          <li><span><a href="https://www.reddit.com/r/firefox/comments/rroik2/win10_ff_keeping_the_audio_focus_on_mulitpoint/">Firefox multipoint focus report</a> - same no-audible-tab symptom from 2021.</span></li>
+          <li><span><a href="https://www.reddit.com/r/bose/comments/1esytnv/multipoint_while_windows_is_muted/">Bose muted-Windows multipoint report</a> - silent Windows source steals phone playback.</span></li>
+          <li><span><a href="https://www.reddit.com/r/bose/comments/1d9w1j0/bose_qc_ultra_multipoint_issue/">Bose QC Ultra multipoint report</a> - phone plays briefly, then pauses.</span></li>
+          <li><span><a href="https://support.spotify.com/us/article/ongoing-issues/">Spotify: Ongoing Issues</a> - official consumer issue route.</span></li>
+          <li><span><a href="https://community.spotify.com/t5/FAQs/Spotify-Ongoing-Issues/ta-p/5182588">Spotify Community issue-reporting FAQ</a> - required details and escalation process.</span></li>
+          <li><span><a href="https://developer.spotify.com/blog/2020-04-28-developer-community-forum">Spotify Developer Community announcement</a> - replaced Web API/Playback SDK GitHub issue trackers.</span></li>
+          <li><span><a href="https://developer.apple.com/documentation/coreaudio/capturing-system-audio-with-core-audio-taps">Apple: Core Audio process taps</a> - supported process-level audio observation on modern macOS.</span></li>
+          <li><span><a href="https://developer.android.com/reference/android/media/session/MediaSessionManager">Android: MediaSessionManager</a> - observing active media sessions via notification-listener access.</span></li>
+          <li><span><a href="https://developer.android.com/reference/android/bluetooth/BluetoothA2dp">Android: BluetoothA2dp</a> - A2DP connection and playing-state APIs.</span></li>
+          <li><span><a href="https://github.com/Felip6499/PodSwitch">PodSwitch</a> - recent cross-platform playback-following project based on force reconnects.</span></li>
+          <li><span><a href="https://github.com/File-New-Project/EarTrumpet">EarTrumpet</a> - mature Windows per-app audio routing reference.</span></li>
+          <li><span><a href="https://www.semper.systems/">Semper</a> - open-source macOS process-tap routing project.</span></li>
+        </ol>
+
+        <p class="footer-note">The conclusions above separate direct observations from inference. Bose's internal source-selection algorithm remains proprietary, so any statement about its exact decision rule is necessarily inferred from externally visible A2DP, AVRCP, and audio-session behavior.</p>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    (() => {
+      const links = [...document.querySelectorAll('.toc a')];
+      const sections = links
+        .map((link) => document.querySelector(link.getAttribute('href')))
+        .filter(Boolean);
+
+      const observer = new IntersectionObserver((entries) => {
+        const visible = entries
+          .filter((entry) => entry.isIntersecting)
+          .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
+        if (!visible) return;
+        for (const link of links) {
+          link.classList.toggle('active', link.getAttribute('href') === `#${visible.target.id}`);
+        }
+      }, { rootMargin: '-15% 0px -70% 0px', threshold: [0, 0.1, 0.5] });
+
+      for (const section of sections) observer.observe(section);
+    })();
+  </script>
+</body>
+</html>

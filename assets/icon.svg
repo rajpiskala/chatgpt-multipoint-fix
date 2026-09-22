@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-labelledby="title description">
+  <title id="title">ChatGPT Bluetooth Multipoint Audio Fix icon</title>
+  <desc id="description">Two devices connected to a central pair of headphones with an open audio path.</desc>
+  <defs>
+    <linearGradient id="background" x1="18" y1="14" x2="110" y2="114" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0f766e"/>
+      <stop offset="1" stop-color="#2563eb"/>
+    </linearGradient>
+  </defs>
+  <rect width="128" height="128" rx="28" fill="url(#background)"/>
+  <path d="M26 39h18a8 8 0 0 1 8 8v10M102 39H84a8 8 0 0 0-8 8v10" fill="none" stroke="#ccfbf1" stroke-width="7" stroke-linecap="round"/>
+  <rect x="17" y="29" width="20" height="29" rx="4" fill="#ecfeff"/>
+  <rect x="91" y="29" width="20" height="29" rx="4" fill="#ecfeff"/>
+  <path d="M39 83v-9a25 25 0 0 1 50 0v9" fill="none" stroke="#fff" stroke-width="8" stroke-linecap="round"/>
+  <rect x="34" y="78" width="16" height="27" rx="7" fill="#fff"/>
+  <rect x="78" y="78" width="16" height="27" rx="7" fill="#fff"/>
+  <path d="M52 100c8 6 16 6 24 0" fill="none" stroke="#ccfbf1" stroke-width="6" stroke-linecap="round"/>
+  <circle cx="64" cy="55" r="5" fill="#fbbf24"/>
+</svg>
