@@ -1,15 +1,15 @@
 // ==UserScript==
 // @name         ChatGPT - Release Bose Multipoint Audio Lock
-// @name:en      ChatGPT Bluetooth Multipoint Audio Fix
+// @name:en      ChatGPT Multipoint Fix
 // @namespace    https://github.com/rajpiskala/scripts
-// @version      1.2.0
+// @version      1.2.1
 // @description  Stops stale ChatGPT voice preconnections from blocking Bluetooth multipoint audio handoff.
 // @author       Raj Piskala
 // @match        https://chatgpt.com/*
-// @homepageURL  https://github.com/rajpiskala/chatgpt-bluetooth-audio-fix
-// @supportURL   https://github.com/rajpiskala/chatgpt-bluetooth-audio-fix/issues
-// @updateURL    https://raw.githubusercontent.com/rajpiskala/chatgpt-bluetooth-audio-fix/main/src/chatgpt-bluetooth-audio-fix.user.js
-// @downloadURL  https://raw.githubusercontent.com/rajpiskala/chatgpt-bluetooth-audio-fix/main/src/chatgpt-bluetooth-audio-fix.user.js
+// @homepageURL  https://github.com/rajpiskala/chatgpt-multipoint-fix
+// @supportURL   https://github.com/rajpiskala/chatgpt-multipoint-fix/issues
+// @updateURL    https://raw.githubusercontent.com/rajpiskala/chatgpt-multipoint-fix/main/src/chatgpt-bluetooth-audio-fix.user.js
+// @downloadURL  https://raw.githubusercontent.com/rajpiskala/chatgpt-multipoint-fix/main/src/chatgpt-bluetooth-audio-fix.user.js
 // @license      MIT
 // @grant        GM_registerMenuCommand
 // @run-at       document-start
@@ -53,7 +53,7 @@
      * whether the button is visible or hidden.
      */
 
-    const VERSION = '1.2.0';
+    const VERSION = '1.2.1';
     const INSTANCE_KEY = '__chatgpt_bose_audio_release_v1__';
     const API_KEY = '__chatgptBoseAudio';
     const UI_ID = 'chatgpt-bose-audio-release';

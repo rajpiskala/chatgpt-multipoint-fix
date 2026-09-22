@@ -2,7 +2,7 @@
 
 Effective: September 21, 2026
 
-ChatGPT Bluetooth Multipoint Audio Fix has no analytics, advertising,
+ChatGPT Multipoint Fix has no analytics, advertising,
 telemetry, tracking, or maintainer-operated server. The maintainer does not
 receive your conversations, microphone data, browsing activity, settings, or
 usage information.

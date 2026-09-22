@@ -112,11 +112,13 @@ The FAQ and troubleshooting guides should answer these questions directly:
 
 ### Product and repository name
 
-- Product: **ChatGPT Bluetooth Multipoint Audio Fix**
-- Repository: `chatgpt-bluetooth-audio-fix`
+- Product: **ChatGPT Multipoint Fix**
+- Repository: `chatgpt-multipoint-fix`
 
-This contains the product, device category, symptom, and outcome without
-incorrectly implying that only Bose hardware is affected.
+The shorter name centers the actual multipoint failure and is easier to read
+and remember. The repository description, README, and topics retain the
+Bluetooth, audio, headphones, and Bose symptom language people are likely to
+search for.
 
 ### GitHub description
 

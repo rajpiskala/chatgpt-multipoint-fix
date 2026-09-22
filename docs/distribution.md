@@ -36,7 +36,7 @@ search it for site-specific fixes.
 
 Listing name:
 
-> ChatGPT Bluetooth Multipoint Audio Fix
+> ChatGPT Multipoint Fix
 
 Short description:
 

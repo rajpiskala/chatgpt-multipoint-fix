@@ -8,7 +8,7 @@ const source = fs.readFileSync(
 
 const requiredMetadata = [
   '// @name         ChatGPT - Release Bose Multipoint Audio Lock',
-  '// @name:en      ChatGPT Bluetooth Multipoint Audio Fix',
+  '// @name:en      ChatGPT Multipoint Fix',
   '// @namespace    https://github.com/rajpiskala/scripts',
   '// @match        https://chatgpt.com/*',
   '// @grant        GM_registerMenuCommand',
@@ -16,7 +16,7 @@ const requiredMetadata = [
   '// @sandbox      raw',
   '// @noframes',
   '// @license      MIT',
-  'raw.githubusercontent.com/rajpiskala/chatgpt-bluetooth-audio-fix/main/',
+  'raw.githubusercontent.com/rajpiskala/chatgpt-multipoint-fix/main/',
 ];
 
 for (const entry of requiredMetadata) {

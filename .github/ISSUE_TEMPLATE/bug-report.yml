@@ -13,7 +13,7 @@ body:
     id: script-version
     attributes:
       label: Userscript version
-      placeholder: "1.2.0"
+      placeholder: "1.2.1"
     validations:
       required: true
   - type: input

@@ -3,7 +3,7 @@
 ## Reporting a vulnerability
 
 Please use [GitHub's private vulnerability
-report](https://github.com/rajpiskala/chatgpt-bluetooth-audio-fix/security/advisories/new)
+report](https://github.com/rajpiskala/chatgpt-multipoint-fix/security/advisories/new)
 for a permission bypass, unintended connection closure, private-data exposure,
 or another sensitive issue.
 

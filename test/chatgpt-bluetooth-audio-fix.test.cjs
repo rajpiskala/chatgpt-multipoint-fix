@@ -166,7 +166,7 @@ test('userscript metadata requests early main-world Firefox injection', () => {
     );
     const source = fs.readFileSync(sourcePath, 'utf8');
 
-    assert.match(source, /@version\s+1\.2\.0/);
+    assert.match(source, /@version\s+1\.2\.1/);
     assert.match(source, /@run-at\s+document-start/);
     assert.match(source, /@sandbox\s+raw/);
     assert.match(source, /@grant\s+GM_registerMenuCommand/);

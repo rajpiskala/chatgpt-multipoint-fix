@@ -1,7 +1,15 @@
 # Changelog
 
-All notable changes to ChatGPT Bluetooth Multipoint Audio Fix are documented
+All notable changes to ChatGPT Multipoint Fix are documented
 here.
+
+## 1.2.1 — 2026-09-21
+
+- Rename the public project and repository to ChatGPT Multipoint Fix.
+- Rewrite the README in a warmer, more conversational voice and add section
+  emojis inspired by Marvin Pilot.
+- Keep the legacy userscript filename and internal identity so existing
+  installations continue receiving updates after the rename.
 
 ## 1.2.0 — 2026-09-21
 
