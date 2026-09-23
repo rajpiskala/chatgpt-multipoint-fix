@@ -18,7 +18,7 @@
   <a href="https://raw.githubusercontent.com/rajpiskala/chatgpt-multipoint-fix/main/src/chatgpt-bluetooth-audio-fix.user.js"><img alt="Install ChatGPT Multipoint Fix" src="https://img.shields.io/badge/Install_userscript-0f766e?style=for-the-badge&amp;logo=tampermonkey&amp;logoColor=white"></a>
 </p>
 
-Bluetooth multipoint is great when it works: my Bose earbuds can stay connected to both my laptop and phone, then follow whichever one is playing audio. But whenever I had ChatGPT open on my laptop, that handoff would break. Spotify, YouTube, or a podcast on my phone would pause immediately—even though ChatGPT wasn't playing anything and I wasn't using Voice Mode. The only reliable fix was closing every ChatGPT tab.
+Bluetooth multipoint is great when it works: my Bose earbuds can stay connected to both my laptop and phone, then follow whichever one is playing audio. But whenever I had ChatGPT open on my laptop, it was highly frustrating because that handoff would break. When I say it breaks: Spotify, YouTube, or a podcast on my phone would pause immediately and there would be no way of unpausing it even tapping it. This is even though ChatGPT wasn't playing anything and I wasn't using Voice Mode. The only reliable fix was closing every ChatGPT tab.
 
 That was the clue. ChatGPT could leave a silent WebRTC audio connection waiting in the background, which was enough to keep the laptop relevant to the headphones' multipoint connection. This userscript closes that stale connection for you while leaving real Voice Mode calls alone.
 
