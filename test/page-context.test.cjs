@@ -114,6 +114,31 @@ test('native promises and synchronous exceptions keep their identity', () => {
     assert.throws(() => pc.addTrack(failure), error => error === failure);
 });
 
+test('tracks and automatically closes audio preparation that never reaches createOffer', () => {
+    const browser = makeBrowser();
+    browser.boot();
+    const pc = browser.cachedConnection;
+    pc.addTransceiver('audio');
+    const status = browser.page.__chatgptBoseAudio.getStatus();
+    assert.equal(status.trackedCount, 1);
+    assert.equal(status.warmCount, 1);
+    assert.equal(status.peerConnections[0].isPreOfferAudioConnection, true);
+    browser.advance(16000);
+    browser.intervals[0]();
+    assert.equal(pc.closeCalls, 1);
+    assert.equal(browser.page.__chatgptBoseAudio.getStatus().releasedCount, 1);
+});
+
+test('manual release closes a pre-offer audio connection exactly once', () => {
+    const browser = makeBrowser();
+    browser.boot();
+    const pc = browser.cachedConnection;
+    pc.addTransceiver('audio');
+    assert.equal(browser.page.__chatgptBoseAudio.release('manual pre-offer test'), 1);
+    assert.equal(browser.page.__chatgptBoseAudio.release('repeated release'), 0);
+    assert.equal(pc.closeCalls, 1);
+});
+
 test('sandbox tracking preserves microphone and negotiated-session protections', async () => {
     const browser = makeBrowser({ sandbox: true });
     browser.boot();

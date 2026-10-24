@@ -65,6 +65,13 @@ function makeWarmConnection() {
     return pc;
 }
 
+function makePreOfferConnection() {
+    const pc = makeWarmConnection();
+    pc.signalingState = 'stable';
+    pc.localDescription = null;
+    return pc;
+}
+
 test('resolves Firefox page objects rather than a userscript window shadow', () => {
     const page = { RTCPeerConnection: FakeRTCPeerConnection };
     const sandbox = { wrappedJSObject: page };
@@ -96,6 +103,69 @@ test('releases an unanswered audio offer only after the automatic grace period',
         false,
     );
     assert.equal(stale.autoReleaseEligible, true);
+});
+
+test('releases a stale audio transceiver even before a local offer exists', () => {
+    const record = createRecord(makePreOfferConnection(), 1, 0);
+    const first = inspectRecord(record, 1_000, false);
+    assert.equal(first.isPreOfferAudioConnection, true);
+    assert.equal(first.isUnansweredAudioOffer, false);
+    assert.equal(first.manualReleaseEligible, true);
+    assert.equal(first.autoReleaseEligible, false);
+    assert.equal(first.releaseAgeMs, 0);
+
+    const stale = inspectRecord(record, 1_000 + DEFAULT_CONFIG.autoReleaseGraceMs, false);
+    assert.equal(stale.offerAgeMs, null);
+    assert.equal(stale.preOfferAgeMs, DEFAULT_CONFIG.autoReleaseGraceMs);
+    assert.equal(stale.autoReleaseEligible, true);
+});
+
+test('a new local offer receives its own grace period after pre-offer preparation', () => {
+    const pc = makePreOfferConnection();
+    const record = createRecord(pc, 1, 0);
+    inspectRecord(record, 0, false);
+    pc.localDescription = { type: 'offer', sdp: 'v=0\r\nm=audio 9 UDP/TLS/RTP/SAVPF 111\r\n' };
+    pc.signalingState = 'have-local-offer';
+    const offer = inspectRecord(record, 14_000, false);
+    assert.equal(offer.isPreOfferAudioConnection, false);
+    assert.equal(offer.releaseAgeMs, 0);
+    assert.equal(inspectRecord(record, 16_000, false).autoReleaseEligible, false);
+    assert.equal(inspectRecord(record, 29_000, false).autoReleaseEligible, true);
+
+    pc.localDescription = null;
+    pc.signalingState = 'stable';
+    const rollback = inspectRecord(record, 30_000, false);
+    assert.equal(rollback.preOfferAgeMs, 0);
+    assert.equal(rollback.autoReleaseEligible, false);
+
+    pc.localDescription = { type: 'offer', sdp: 'v=0\r\nm=audio 9 UDP/TLS/RTP/SAVPF 111\r\n' };
+    pc.signalingState = 'have-local-offer';
+    const retry = inspectRecord(record, 44_000, false);
+    assert.equal(retry.offerAgeMs, 0);
+    assert.equal(retry.autoReleaseEligible, false);
+    assert.equal(inspectRecord(record, 46_000, false).autoReleaseEligible, false);
+    assert.equal(inspectRecord(record, 59_000, false).autoReleaseEligible, true);
+});
+
+test('pre-offer cleanup retains voice, sender and negotiation protections', () => {
+    const cases = [
+        { name: 'live microphone', change: pc => { pc.senders = [{ track: { kind: 'audio', readyState: 'live' } }]; } },
+        { name: 'remote offer', change: pc => { pc.remoteDescription = { type: 'offer', sdp: 'v=0' }; } },
+        { name: 'connected transport', change: pc => { pc.connectionState = 'connected'; } },
+        { name: 'ICE checking', change: pc => { pc.iceConnectionState = 'checking'; } },
+        { name: 'unknown signaling', change: pc => { pc.signalingState = 'unknown'; } },
+        { name: 'voice interface', voice: true, change() {} },
+        { name: 'video only', change: pc => { pc.transceivers[0].receiver.track.kind = 'video'; } },
+    ];
+    for (const item of cases) {
+        const pc = makePreOfferConnection();
+        item.change(pc);
+        const record = createRecord(pc, 1, 0);
+        inspectRecord(record, 0, Boolean(item.voice));
+        const snapshot = inspectRecord(record, 60_000, Boolean(item.voice));
+        assert.equal(snapshot.manualReleaseEligible, false, item.name);
+        assert.equal(snapshot.autoReleaseEligible, false, item.name);
+    }
 });
 
 test('protects a voice connection once a live microphone sender is attached', () => {
@@ -161,7 +231,7 @@ test('userscript metadata requests early injection with explicit page-world acce
     );
     const source = fs.readFileSync(sourcePath, 'utf8');
 
-    assert.match(source, /@version\s+1\.3\.0/);
+    assert.match(source, /@version\s+1\.3\.1/);
     assert.match(source, /@run-at\s+document-start/);
     assert.match(source, /@sandbox\s+JavaScript/);
     assert.match(source, /@grant\s+unsafeWindow/);

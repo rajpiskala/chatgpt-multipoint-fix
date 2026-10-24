@@ -3,6 +3,22 @@
 All notable changes to ChatGPT Multipoint Fix are documented
 here.
 
+## 1.3.1 - 2026-10-24
+
+- Release stale audio preparation even when it never reaches a local SDP offer.
+  Firefox on Windows can open a silent render stream at `addTransceiver('audio')`.
+  Version 1.3.0 tracked this state but could not release it, even manually.
+- Restrict the new case to no local or remote description, stable signaling,
+  new connection/ICE states, no live sender and no active Voice Mode interface.
+- Give a newly created offer its own 15-second grace period rather than inheriting
+  the age of earlier audio preparation.
+- Expose pre-offer and effective release ages in diagnostics. Rename the optional
+  idle label to `Nothing to release` to cover both preparation stages without
+  claiming that the operating system has released audio.
+- Add classification and page-runtime regressions, plus a dated Chrome/Firefox
+  comparison. This does not prove the latest overnight incident had this cause
+  or expand cleanup to negotiated silent sessions.
+
 ## 1.3.0 - 2026-10-23
 
 - Target the actual page WebRTC prototype through `unsafeWindow`, using

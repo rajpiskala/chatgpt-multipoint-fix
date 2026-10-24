@@ -18,6 +18,8 @@ The suite verifies:
 - changed hooks are reported as unhealthy;
 - blank constructor-cache connections are ignored;
 - unanswered audio offers respect the automatic grace period;
+- audio transceivers stalled before any offer respect their own grace period;
+- a new offer does not inherit the earlier preparation's elapsed time;
 - live microphone sender tracks are protected;
 - connections with a remote answer are protected;
 - cleanup pauses while Voice Mode is visible;
@@ -27,6 +29,26 @@ The suite verifies:
 
 The metadata verifier also keeps the package, header, runtime, install URL,
 permissions, and version in sync.
+
+## October 24 Windows comparison
+
+The [dated comparison](browser-comparison-2026-10-24.md) separates genuine
+ChatGPT navigation from controlled native WebRTC tests. Chrome 155 did not
+reproduce a Bose audio block in these checks. Isolated Firefox 156 did open a
+running sampled-silent headset stream from a bare audio transceiver on a blank
+page, before an SDP offer existed. Version 1.3.0 neither auto-released nor
+manually released that tracked pre-offer state. It did release unanswered offers
+after the grace period in both browsers.
+
+Version 1.3.1 then passed the real Firefox pre-offer test: automatic closure
+returned the Bose render session to inactive while the test context remained
+open. It also closed a genuine Dot prewarm offer in Chrome 155. The suite has
+23 automated tests, including manual pre-offer release and fresh grace periods
+after a local-offer retry or rollback.
+
+These are direct page-script tests, not verification of the installed Firefox
+Tampermonkey sandbox or the user's overnight session. Phone Spotify continued
+streaming during the tests; an end-to-end phone block was not reproduced.
 
 ## Chrome compatibility result
 

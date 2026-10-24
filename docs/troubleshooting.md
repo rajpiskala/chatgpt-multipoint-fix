@@ -35,7 +35,7 @@ Show it through **Toggle debug status button** in Tampermonkey's menu or press
 ## The button appears but the page diagnostic API is missing
 
 This can indicate that an older version installed its tracking code in a
-userscript sandbox rather than the page's own JavaScript world. Update to 1.3.0
+userscript sandbox rather than the page's own JavaScript world. Update to 1.3.1
 and reload all existing ChatGPT tabs. The script now explicitly bridges to the
 page and exposes `trackingHealthy` in `getStatus()`.
 
@@ -54,8 +54,20 @@ connections.
 
 ## The button says “Release audio”
 
-An unanswered audio offer is inside the grace period. Wait for automatic
+An unnegotiated audio preconnection is inside the grace period. Wait for automatic
 cleanup or click the button / press `Alt+Shift+B` to release it immediately.
+
+## Tracking is healthy, but an audio connection is never eligible
+
+In versions through 1.3.0, an audio transceiver with no local SDP offer was
+tracked but not releasable. Firefox can already have opened a silent operating
+system stream at that stage. Version 1.3.1 covers this strict pre-offer state.
+Diagnostics expose `isPreOfferAudioConnection`, `preOfferAgeMs` and `releaseAgeMs`.
+
+A connection with a remote description or live sender remains protected. A
+"Nothing to release" status does not prove that no negotiated stream or other tab
+owns system audio. Do not remove those protections simply because a stream is
+silent.
 
 ## Does this work in the ChatGPT desktop application?
 

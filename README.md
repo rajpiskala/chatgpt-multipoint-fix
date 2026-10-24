@@ -45,15 +45,17 @@ That last point is the important one. If closing ChatGPT doesn't release your he
 
 That's it. The fix runs quietly in the background.
 
-If you installed an earlier copy called **Release Bose Multipoint Audio Lock**, open the same install link and let Tampermonkey update it. The current version is **1.3.0**.
+If you installed an earlier copy called **Release Bose Multipoint Audio Lock**, open the same install link and let Tampermonkey update it. The current source version is **1.3.1**.
 
 ## 🔧 What it actually does
 
 ChatGPT uses WebRTC for real-time voice features. In the failure I ran into, the page created an audio-capable connection but never finished setting it up. Nothing audible was happening, yet the browser and operating system could still make the laptop look active enough that my headphones refused to hand audio back to my phone.
 
-The userscript watches only ChatGPT's WebRTC connections. If one has been sitting unanswered for 15 seconds, has no live sender track, and isn't part of an active Voice Mode session, the script closes it. It doesn't touch Spotify, YouTube, your Bluetooth settings, or system audio.
+The userscript watches only ChatGPT's WebRTC connections. If an audio preconnection sits without an offer or without an answer for 15 seconds, has no live sender track, and isn't part of an active Voice Mode session, the script closes it. The pre-offer case must also have stable signaling and new connection/ICE states. It doesn't touch Spotify, YouTube, your Bluetooth settings, or system audio.
 
 Version 1.3.0 targets the page's actual WebRTC methods, not a userscript-only window shadow. It also observes a constructor or blank connection that ChatGPT cached before installation, when that connection next starts an offer or changes its tracks/descriptions. Reload existing ChatGPT tabs after updating.
+
+Version 1.3.1 also covers audio preparation that never reaches an offer. A controlled Windows test found that Firefox opened a silent headset stream immediately at `addTransceiver('audio')`; Chrome did not. Version 1.3.0 tracked that state but neither automatic nor manual release considered it eligible. See the [browser comparison](docs/browser-comparison-2026-10-24.md) for the evidence and remaining limits.
 
 This also explains why closing ChatGPT fixes the problem: closing the tab destroys the same page-owned connection. The script just performs the smaller cleanup without making you lose your open conversations.
 
@@ -88,8 +90,8 @@ If you turn the button on, these are the states you'll see:
 
 | Status | Meaning |
 | --- | --- |
-| No stale offers | No tracked connection can be released; this does not prove the operating system has released audio. |
-| Release audio | A new unanswered connection is still inside the 15-second grace period. You can release it manually. |
+| Nothing to release | No tracked connection can be released; this does not prove the operating system has released audio. |
+| Release audio | An unnegotiated audio preconnection is still inside the 15-second grace period. You can release it manually. |
 | Audio released | The script recently closed an eligible connection. |
 | Voice active | ChatGPT Voice Mode is visible, so automatic cleanup is paused. |
 | Tracking lost | Another script replaced a WebRTC hook, so tracking cannot be verified. |

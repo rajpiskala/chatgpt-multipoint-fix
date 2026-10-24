@@ -35,6 +35,14 @@ The page is silent, but the browser and operating system may still treat the
 computer as a meaningful audio source. Bluetooth multipoint firmware can then
 refuse to hand playback to the phone or send a media-pause command back to it.
 
+A controlled October 24 test isolated an earlier stage: Firefox 156 on Windows
+opened a running, sampled-silent Bose render stream immediately after
+`pc.addTransceiver('audio')`, with no offer, remote description, microphone track,
+RTP traffic or media element. Chrome 155 did not open a stream for the same
+sequence. Closing the Firefox peer connection released the stream. This
+[browser comparison](browser-comparison-2026-10-24.md) establishes the mechanism,
+not the exact cause of every overnight incident.
+
 ## What the userscript changes
 
 The userscript starts at `document-start` and explicitly targets the page's
@@ -54,12 +62,16 @@ Every second, it classifies those tracked connections. Automatic cleanup is
 allowed only when all of these conditions remain true:
 
 - the connection is not already closed;
-- the local description is an SDP offer;
-- the offer contains an audio media section;
+- an audio transceiver exists before any local description, with stable signaling
+  and new connection/ICE states; or an unanswered local offer contains audio;
 - no remote description has arrived;
 - no live sender track is attached;
 - ChatGPT's Voice Mode interface is not active; and
-- the offer has remained unanswered for at least 15 seconds.
+- the qualifying preparation stage has lasted at least 15 seconds.
+
+Version 1.3.1 adds the pre-offer case. A newly installed local offer starts its
+own grace period, so time spent in earlier preparation cannot shorten negotiation.
+Blank cached connections with no audio transceiver are still ignored.
 
 An eligible connection is closed with the normal WebRTC `close()` method.
 The userscript does not mute the tab, change the operating system's output
@@ -95,8 +107,8 @@ are the relevant signals for microphone use.
 
 | State | Meaning |
 | --- | --- |
-| No stale offers | No tracked connection is currently eligible for release; this does not prove the OS audio stream is inactive. |
-| Warm | An unanswered audio offer is inside the grace period and can be released manually. |
+| Nothing to release | No tracked connection is currently eligible for release; this does not prove the OS audio stream is inactive. |
+| Warm | An unnegotiated audio preconnection is inside the grace period and can be released manually. |
 | Released | The script recently closed at least one eligible connection. |
 | Voice active | ChatGPT Voice Mode is visible, so cleanup is paused. |
 | Tracking lost | The page's method hooks changed; the script cannot confirm healthy tracking. |

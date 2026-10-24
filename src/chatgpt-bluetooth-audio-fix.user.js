@@ -2,7 +2,7 @@
 // @name         ChatGPT - Release Bose Multipoint Audio Lock
 // @name:en      ChatGPT Multipoint Fix
 // @namespace    https://github.com/rajpiskala/scripts
-// @version      1.3.0
+// @version      1.3.1
 // @description  Stops stale ChatGPT voice preconnections from blocking Bluetooth multipoint audio handoff.
 // @author       Raj Piskala
 // @match        https://chatgpt.com/*
@@ -24,16 +24,16 @@
     /*
      * PURPOSE
      * -------
-     * ChatGPT can leave an unanswered WebRTC audio offer open before voice
-     * mode starts. On some Bluetooth multipoint headphones, that silent
+     * ChatGPT can leave WebRTC audio preparation open before voice mode
+     * starts, including before a local offer exists. That silent
      * laptop stream can keep ownership of the headset and repeatedly pause
-     * media playing from a phone. This script closes only stale, unanswered
-     * audio offers; it leaves active ChatGPT voice sessions alone.
+     * media playing from a phone. This script closes only stale, unnegotiated
+     * audio preparations; it leaves active ChatGPT voice sessions alone.
      *
      * STATES
      * ------
      * CLEAR:        no releasable ChatGPT audio preconnection is present.
-     * WARM:         an unanswered audio offer is inside the 15-second grace
+     * WARM:         an idle audio preconnection is inside the 15-second grace
      *               period and can be released manually.
      * RELEASED:     the script recently closed at least one stale connection.
      * VOICE ACTIVE: ChatGPT voice mode is visible, so cleanup is paused.
@@ -54,7 +54,7 @@
      * whether the button is visible or hidden.
      */
 
-    const VERSION = '1.3.0';
+    const VERSION = '1.3.1';
     const INSTANCE_KEY = '__chatgpt_bose_audio_release_v1__';
     const API_KEY = '__chatgptBoseAudio';
     const UI_ID = 'chatgpt-bose-audio-release';
@@ -108,6 +108,7 @@
             pc,
             createdAt: now,
             offerSeenAt: null,
+            preOfferSeenAt: null,
             closedAt: null,
             closedByScript: false,
             closeReason: '',
@@ -131,22 +132,42 @@
             && localDescription?.type === 'offer'
             && remoteDescription == null
             && hasAudio;
+        // Firefox opens a render stream at addTransceiver('audio'), before SDP.
+        const isPreOfferAudioConnection = !isClosed
+            && localDescription == null
+            && remoteDescription == null
+            && signalingState === 'stable'
+            && connectionState === 'new'
+            && iceConnectionState === 'new'
+            && hasAudio;
 
-        if (isUnansweredAudioOffer && record.offerSeenAt == null) {
-            record.offerSeenAt = now;
+        if (isUnansweredAudioOffer) {
+            if (record.offerSeenAt == null) record.offerSeenAt = now;
+        } else {
+            record.offerSeenAt = null;
+        }
+        if (isPreOfferAudioConnection) {
+            if (record.preOfferSeenAt == null) record.preOfferSeenAt = now;
+        } else {
+            record.preOfferSeenAt = null;
         }
 
         const offerAgeMs = record.offerSeenAt == null ? null : Math.max(0, now - record.offerSeenAt);
-        const manualReleaseEligible = isUnansweredAudioOffer
+        const preOfferAgeMs = record.preOfferSeenAt == null ? null : Math.max(0, now - record.preOfferSeenAt);
+        const releaseAgeMs = isPreOfferAudioConnection ? preOfferAgeMs : offerAgeMs;
+        const manualReleaseEligible = (isUnansweredAudioOffer || isPreOfferAudioConnection)
             && !hasLiveSender
             && !voiceUiActive;
         const autoReleaseEligible = manualReleaseEligible
-            && offerAgeMs >= config.autoReleaseGraceMs;
+            && releaseAgeMs != null
+            && releaseAgeMs >= config.autoReleaseGraceMs;
 
         return {
             id: record.id,
             ageMs: Math.max(0, now - record.createdAt),
             offerAgeMs,
+            preOfferAgeMs,
+            releaseAgeMs,
             signalingState,
             connectionState,
             iceConnectionState,
@@ -155,6 +176,7 @@
             hasRemoteDescription: remoteDescription != null,
             isClosed,
             isUnansweredAudioOffer,
+            isPreOfferAudioConnection,
             voiceUiActive,
             manualReleaseEligible,
             autoReleaseEligible,
@@ -414,7 +436,7 @@
                 buttonState = 'released';
                 button.style.cursor = 'pointer';
             } else {
-                button.textContent = 'No stale offers';
+                button.textContent = 'Nothing to release';
                 button.style.cursor = 'pointer';
             }
 
@@ -423,9 +445,9 @@
                 getButtonPalette(buttonState, detectDarkMode(documentObject, pageWindow)),
             );
 
-            const remainingMs = warmConnection?.offerAgeMs == null
+            const remainingMs = warmConnection?.releaseAgeMs == null
                 ? null
-                : Math.max(0, config.autoReleaseGraceMs - warmConnection.offerAgeMs);
+                : Math.max(0, config.autoReleaseGraceMs - warmConnection.releaseAgeMs);
             const automaticText = remainingMs == null
                 ? ''
                 : ` Auto-release in ${formatDuration(remainingMs)}.`;
@@ -433,7 +455,7 @@
                 ? 'The page WebRTC tracking hooks are no longer installed.'
                 : current.voiceUiActive
                 ? 'ChatGPT voice mode is active; cleanup is paused.'
-                : `${current.warmCount} unanswered ChatGPT audio preconnection(s).${automaticText} ${state.releasedCount} released this page load.`;
+                : `${current.warmCount} idle ChatGPT audio preconnection(s).${automaticText} ${state.releasedCount} released this page load.`;
         }
 
         function setDebugButtonVisible(visible) {
@@ -473,7 +495,7 @@
             if (released > 0) {
                 state.lastReleaseAt = now;
                 state.releasedCount += released;
-                console.info(LOG_PREFIX, `Released ${released} unanswered audio preconnection(s): ${reason}`);
+                console.info(LOG_PREFIX, `Released ${released} idle audio preconnection(s): ${reason}`);
             }
 
             updateButton(now);
