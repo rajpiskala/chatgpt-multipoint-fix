@@ -2,7 +2,7 @@
 // @name         ChatGPT - Release Bose Multipoint Audio Lock
 // @name:en      ChatGPT Multipoint Fix
 // @namespace    https://github.com/rajpiskala/scripts
-// @version      1.2.1
+// @version      1.3.0
 // @description  Stops stale ChatGPT voice preconnections from blocking Bluetooth multipoint audio handoff.
 // @author       Raj Piskala
 // @match        https://chatgpt.com/*
@@ -12,8 +12,9 @@
 // @downloadURL  https://raw.githubusercontent.com/rajpiskala/chatgpt-multipoint-fix/main/src/chatgpt-bluetooth-audio-fix.user.js
 // @license      MIT
 // @grant        GM_registerMenuCommand
+// @grant        unsafeWindow
 // @run-at       document-start
-// @sandbox      raw
+// @sandbox      JavaScript
 // @noframes
 // ==/UserScript==
 
@@ -53,7 +54,7 @@
      * whether the button is visible or hidden.
      */
 
-    const VERSION = '1.2.1';
+    const VERSION = '1.3.0';
     const INSTANCE_KEY = '__chatgpt_bose_audio_release_v1__';
     const API_KEY = '__chatgptBoseAudio';
     const UI_ID = 'chatgpt-bose-audio-release';
@@ -178,37 +179,58 @@
         }
     }
 
-    function createConstructorWrapper(NativeRTCPeerConnection, onCreated) {
-        function TrackedRTCPeerConnection(...args) {
-            if (!new.target) {
-                return Reflect.apply(NativeRTCPeerConnection, this, args);
+    function resolvePageWindow(localWindow, unwrappedWindow) {
+        const target = unwrappedWindow || localWindow;
+        return target.wrappedJSObject || target;
+    }
+
+    function createPageBridge(pageWindow) {
+        return {
+            exportCallback: typeof exportFunction === 'function'
+                ? (callback) => exportFunction(callback, pageWindow)
+                : (callback) => callback,
+            copyValue: typeof cloneInto === 'function'
+                ? (value) => cloneInto(value, pageWindow)
+                : (value) => value,
+        };
+    }
+
+    function installPeerConnectionHooks(pageWindow, onObserved, bridge) {
+        const prototype = pageWindow.RTCPeerConnection.prototype;
+        const hooks = [];
+        try {
+            // Prototype hooks also see a constructor or blank PC cached before installation.
+            for (const name of ['createOffer', 'createAnswer', 'setLocalDescription',
+                'setRemoteDescription', 'addTransceiver', 'addTrack']) {
+                const descriptor = Object.getOwnPropertyDescriptor(prototype, name);
+                if (typeof descriptor?.value !== 'function') continue;
+                const original = descriptor.value;
+                const wrapped = bridge.exportCallback(function (...args) {
+                    const result = Reflect.apply(original, this, args);
+                    try {
+                        onObserved(this);
+                    } catch (error) {
+                        console.warn(LOG_PREFIX, 'Failed to observe a peer connection', error);
+                    }
+                    return result;
+                });
+                Object.defineProperty(prototype, name, { ...descriptor, value: wrapped });
+                hooks.push({ name, descriptor, wrapped });
             }
-
-            const newTarget = new.target === TrackedRTCPeerConnection
-                ? NativeRTCPeerConnection
-                : new.target;
-            const pc = Reflect.construct(NativeRTCPeerConnection, args, newTarget);
-
-            try {
-                onCreated(pc);
-            } catch (error) {
-                console.warn(LOG_PREFIX, 'Failed to track a peer connection', error);
+            if (!hooks.some((hook) => hook.name === 'setLocalDescription')) {
+                throw new Error('The page WebRTC description method could not be instrumented.');
             }
-
-            return pc;
+        } catch (error) {
+            for (const hook of hooks.reverse()) {
+                safeCall(undefined, () => Object.defineProperty(prototype, hook.name, hook.descriptor));
+            }
+            throw error;
         }
-
-        Object.setPrototypeOf(TrackedRTCPeerConnection, NativeRTCPeerConnection);
-        TrackedRTCPeerConnection.prototype = NativeRTCPeerConnection.prototype;
-
-        safeCall(undefined, () => {
-            Object.defineProperty(TrackedRTCPeerConnection, 'name', {
-                configurable: true,
-                value: NativeRTCPeerConnection.name,
-            });
-        });
-
-        return TrackedRTCPeerConnection;
+        return {
+            methods: hooks.map((hook) => hook.name),
+            isHealthy: () => safeCall(false, () => hooks.every((hook) =>
+                pageWindow.RTCPeerConnection.prototype[hook.name] === hook.wrapped)),
+        };
     }
 
     function isVoiceUiActive(documentObject) {
@@ -244,12 +266,14 @@
                 released: { background: '#052e16', color: '#bbf7d0' },
                 voice: { background: '#172554', color: '#bfdbfe' },
                 warm: { background: '#451a03', color: '#fde68a' },
+                lost: { background: '#450a0a', color: '#fecaca' },
             }
             : {
                 clear: { background: '#f3f4f6', color: '#374151' },
                 released: { background: '#dcfce7', color: '#14532d' },
                 voice: { background: '#dbeafe', color: '#1e3a8a' },
                 warm: { background: '#fef3c7', color: '#78350f' },
+                lost: { background: '#fee2e2', color: '#991b1b' },
             };
 
         return {
@@ -264,6 +288,7 @@
     function install(pageWindow, documentObject, config = DEFAULT_CONFIG) {
         const NativeRTCPeerConnection = pageWindow.RTCPeerConnection;
         if (typeof NativeRTCPeerConnection !== 'function') return null;
+        const bridge = createPageBridge(pageWindow);
 
         const records = new Map();
         const state = {
@@ -282,7 +307,9 @@
         function snapshots(now = Date.now()) {
             const voiceActive = isVoiceUiActive(documentObject);
             return Array.from(records.values(), (record) => {
-                return inspectRecord(record, now, voiceActive, config);
+                const snapshot = inspectRecord(record, now, voiceActive, config);
+                if (snapshot.isClosed && record.closedAt == null) record.closedAt = now;
+                return snapshot;
             });
         }
 
@@ -302,6 +329,9 @@
 
             return {
                 version: VERSION,
+                trackingMode: 'page-prototype',
+                trackingHealthy: hooks.isHealthy(),
+                hookedMethods: hooks.methods.slice(),
                 trackedCount: peerConnections.filter((item) => !item.isClosed).length,
                 warmCount: warmConnections.length,
                 staleCount: staleConnections.length,
@@ -317,8 +347,8 @@
             documentObject.getElementById(UI_ID)?.remove();
         }
 
-        function ensureButton() {
-            if (!state.debugButtonVisible) {
+        function ensureButton(forceVisible = false) {
+            if (!state.debugButtonVisible && !forceVisible) {
                 removeButton();
                 return null;
             }
@@ -335,7 +365,8 @@
                 right: '14px',
                 bottom: '14px',
                 zIndex: '2147483647',
-                minWidth: '112px',
+                width: '160px',
+                boxSizing: 'border-box',
                 height: '36px',
                 padding: '0 12px',
                 border: '1px solid',
@@ -350,18 +381,27 @@
         }
 
         function updateButton(now = Date.now()) {
-            const button = ensureButton();
+            const current = status(now);
+            safeCall(undefined, () => {
+                documentObject.documentElement?.setAttribute('data-chatgpt-bose-version', VERSION);
+                documentObject.documentElement?.setAttribute('data-chatgpt-bose-tracking',
+                    current.trackingHealthy ? 'ready' : 'lost');
+            });
+            const button = ensureButton(!current.trackingHealthy);
             if (!button) return;
 
-            const current = status(now);
             const warmConnection = current.peerConnections.find((item) => item.manualReleaseEligible);
             const justReleased = state.lastReleaseAt > 0
                 && now - state.lastReleaseAt < config.releasedLabelDurationMs;
 
-            button.disabled = current.voiceUiActive;
+            button.disabled = current.voiceUiActive || !current.trackingHealthy;
             let buttonState = 'clear';
 
-            if (current.voiceUiActive) {
+            if (!current.trackingHealthy) {
+                button.textContent = 'Tracking lost';
+                buttonState = 'lost';
+                button.style.cursor = 'not-allowed';
+            } else if (current.voiceUiActive) {
                 button.textContent = 'Voice active';
                 buttonState = 'voice';
                 button.style.cursor = 'not-allowed';
@@ -374,7 +414,7 @@
                 buttonState = 'released';
                 button.style.cursor = 'pointer';
             } else {
-                button.textContent = 'Audio clear';
+                button.textContent = 'No stale offers';
                 button.style.cursor = 'pointer';
             }
 
@@ -389,7 +429,9 @@
             const automaticText = remainingMs == null
                 ? ''
                 : ` Auto-release in ${formatDuration(remainingMs)}.`;
-            button.title = current.voiceUiActive
+            button.title = !current.trackingHealthy
+                ? 'The page WebRTC tracking hooks are no longer installed.'
+                : current.voiceUiActive
                 ? 'ChatGPT voice mode is active; cleanup is paused.'
                 : `${current.warmCount} unanswered ChatGPT audio preconnection(s).${automaticText} ${state.releasedCount} released this page load.`;
         }
@@ -467,12 +509,13 @@
             return current;
         }
 
-        function onPeerConnectionCreated(pc) {
+        function onPeerConnectionObserved(pc) {
+            if (records.has(pc)) return;
             const record = createRecord(
                 pc,
                 state.nextId++,
                 Date.now(),
-                safeCall('', () => new Error('RTCPeerConnection created').stack || ''),
+                safeCall('', () => new Error('RTCPeerConnection observed').stack || ''),
             );
             records.set(pc, record);
 
@@ -487,11 +530,7 @@
             updateButton();
         }
 
-        const WrappedRTCPeerConnection = createConstructorWrapper(
-            NativeRTCPeerConnection,
-            onPeerConnectionCreated,
-        );
-        pageWindow.RTCPeerConnection = WrappedRTCPeerConnection;
+        const hooks = installPeerConnectionHooks(pageWindow, onPeerConnectionObserved, bridge);
 
         const api = Object.freeze({
             version: VERSION,
@@ -502,7 +541,16 @@
             setDebugButtonVisible,
             toggleDebugButton,
         });
-        pageWindow[API_KEY] = api;
+        // Only data and the existing narrow commands cross Firefox's sandbox boundary.
+        const pageApi = bridge.copyValue({ version: VERSION });
+        for (const [name, callback] of Object.entries(api)) {
+            if (typeof callback !== 'function') continue;
+            pageApi[name] = bridge.exportCallback((...args) => {
+                const result = callback(...args);
+                return result != null && typeof result === 'object' ? bridge.copyValue(result) : result;
+            });
+        }
+        pageWindow[API_KEY] = Object.freeze(pageApi);
 
         if (typeof GM_registerMenuCommand === 'function') {
             GM_registerMenuCommand('Toggle debug status button', toggleDebugButton);
@@ -520,6 +568,9 @@
                 toggleDebugButton();
             }
         }, true);
+        documentObject.addEventListener('visibilitychange', automaticCheck);
+        pageWindow.addEventListener('pageshow', automaticCheck);
+        pageWindow.addEventListener('focus', automaticCheck);
 
         if (documentObject.readyState === 'loading') {
             documentObject.addEventListener('DOMContentLoaded', () => updateButton(), { once: true });
@@ -534,14 +585,15 @@
             api,
             nativeConstructor: NativeRTCPeerConnection,
             records,
-            wrappedConstructor: WrappedRTCPeerConnection,
+            hooks,
+            pageApi,
         };
     }
 
     const testExports = {
         DEFAULT_CONFIG,
         closeRecord,
-        createConstructorWrapper,
+        createPageBridge,
         createRecord,
         detectDarkMode,
         getButtonPalette,
@@ -549,19 +601,22 @@
         hasLiveSenderTrack,
         inspectRecord,
         install,
+        installPeerConnectionHooks,
+        resolvePageWindow,
     };
 
-    if (typeof module === 'object' && module.exports) {
+    if (typeof window === 'undefined' && typeof module === 'object' && module.exports) {
         module.exports = testExports;
         return;
     }
 
     function boot() {
-        if (window[INSTANCE_KEY]) return;
+        const pageWindow = resolvePageWindow(window, typeof unsafeWindow === 'undefined' ? null : unsafeWindow);
+        if (pageWindow[INSTANCE_KEY]) return;
 
-        const instance = install(window, document);
+        const instance = install(pageWindow, document);
         if (instance) {
-            window[INSTANCE_KEY] = instance;
+            pageWindow[INSTANCE_KEY] = instance.pageApi;
             return;
         }
 

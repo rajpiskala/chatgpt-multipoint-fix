@@ -3,6 +3,21 @@
 All notable changes to ChatGPT Multipoint Fix are documented
 here.
 
+## 1.3.0 - 2026-10-23
+
+- Target the actual page WebRTC prototype through `unsafeWindow`, using
+  Firefox's `exportFunction` and `cloneInto` bridge when available.
+- Observe offer, description and track operations without replacing the native
+  constructor, including when ChatGPT cached a constructor or blank connection.
+- Publish readable page-context diagnostics and hook-health status. Show
+  `Tracking lost` when another script replaces a hook, not a false clear state.
+- Rename the idle debug label to `No stale offers`; it does not claim the OS or
+  headset has released audio.
+- Recheck on focus, visibility changes and page restoration. Keep the existing
+  microphone, negotiated-session and Voice Mode protections.
+- Add sandbox, cached-constructor, native-return and lifecycle regression tests.
+- This update does not automatically close negotiated silent Dot connections.
+
 ## 1.2.1 — 2026-09-21
 
 - Rename the public project and repository to ChatGPT Multipoint Fix.

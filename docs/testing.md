@@ -11,7 +11,11 @@ npm run check
 
 The suite verifies:
 
-- constructor wrapping preserves normal WebRTC construction and static APIs;
+- the native constructor and its static APIs remain intact;
+- sandbox execution targets the real page and exports readable diagnostics;
+- cached constructors and blank connections are observed on later setup calls;
+- native promise and exception identities are preserved;
+- changed hooks are reported as unhealthy;
 - blank constructor-cache connections are ignored;
 - unanswered audio offers respect the automatic grace period;
 - live microphone sender tracks are protected;
@@ -47,6 +51,23 @@ the userscript classified it as warm, then observed the connection close. It
 did not request microphone permission or send audio.
 
 ## Firefox status
+
+Version 1.3.0 adds VM regression tests for the sandbox/page distinction and
+cached constructors. These tests model Firefox's bridge but are not a substitute
+for a live Tampermonkey deployment test. The October 23 incident had an enabled
+1.2.1 script and a visible button while the page-context diagnostic API was
+absent, both before and after reload; two unanswered ChatGPT audio offers
+persisted. A negotiated silent Dot connection was also captured and remains
+outside automatic cleanup's safety boundary.
+
+An isolated Firefox 156 smoke test also passed with the actual native WebRTC
+constructor cached before installation. A data-channel-only offer was tracked
+without replacing the constructor or closing the connection. No native audio
+track was created during that test. A separate mock-audio fixture in Firefox
+verified automatic cleanup after the real 15-second grace period, readable page
+diagnostics, the release label and the forced hook-loss warning. The Firefox
+userscript sandbox bridge itself is covered by VM tests, not yet by a live
+Tampermonkey deployment test of 1.3.0.
 
 The original cleanup core was reproduced and confirmed in daily Firefox use
 on Windows with Bose QuietComfort Earbuds and a Samsung Galaxy S25 Ultra. The

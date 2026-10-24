@@ -45,13 +45,15 @@ That last point is the important one. If closing ChatGPT doesn't release your he
 
 That's it. The fix runs quietly in the background.
 
-If you installed an earlier copy called **Release Bose Multipoint Audio Lock**, open the same install link and let Tampermonkey update it. The current version is **1.2.1**.
+If you installed an earlier copy called **Release Bose Multipoint Audio Lock**, open the same install link and let Tampermonkey update it. The current version is **1.3.0**.
 
 ## 🔧 What it actually does
 
 ChatGPT uses WebRTC for real-time voice features. In the failure I ran into, the page created an audio-capable connection but never finished setting it up. Nothing audible was happening, yet the browser and operating system could still make the laptop look active enough that my headphones refused to hand audio back to my phone.
 
-The userscript watches only ChatGPT's WebRTC connections. If one has been sitting unanswered for 15 seconds, has no live audio track, and isn't part of an active Voice Mode session, the script closes it. It doesn't touch Spotify, YouTube, your Bluetooth settings, or system audio.
+The userscript watches only ChatGPT's WebRTC connections. If one has been sitting unanswered for 15 seconds, has no live sender track, and isn't part of an active Voice Mode session, the script closes it. It doesn't touch Spotify, YouTube, your Bluetooth settings, or system audio.
+
+Version 1.3.0 targets the page's actual WebRTC methods, not a userscript-only window shadow. It also observes a constructor or blank connection that ChatGPT cached before installation, when that connection next starts an offer or changes its tracks/descriptions. Reload existing ChatGPT tabs after updating.
 
 This also explains why closing ChatGPT fixes the problem: closing the tab destroys the same page-owned connection. The script just performs the smaller cleanup without making you lose your open conversations.
 
@@ -86,10 +88,11 @@ If you turn the button on, these are the states you'll see:
 
 | Status | Meaning |
 | --- | --- |
-| Audio clear | The script doesn't see a ChatGPT audio connection it can release. |
+| No stale offers | No tracked connection can be released; this does not prove the operating system has released audio. |
 | Release audio | A new unanswered connection is still inside the 15-second grace period. You can release it manually. |
 | Audio released | The script recently closed an eligible connection. |
 | Voice active | ChatGPT Voice Mode is visible, so automatic cleanup is paused. |
+| Tracking lost | Another script replaced a WebRTC hook, so tracking cannot be verified. |
 
 The button follows ChatGPT's light or dark theme. Its visibility is the only preference the script saves.
 
@@ -128,14 +131,15 @@ An audio-capable WebRTC connection also isn't proof that ChatGPT is recording yo
 
 The userscript runs only on `https://chatgpt.com/*`. It doesn't read your conversations, send analytics, load remote code, make its own network requests, or ask for access to your microphone, camera, cookies, or browsing history.
 
-Its only Tampermonkey permission is `GM_registerMenuCommand`, which creates the three local menu commands above. It stores one local true/false preference for whether the debug button is visible.
+`GM_registerMenuCommand` creates the three local menu commands above. `unsafeWindow` lets the script reach the actual ChatGPT page objects across Firefox's userscript sandbox. It stores one local true/false preference for whether the debug button is visible. It requests no additional site, microphone or network access.
 
 You can read the full [privacy policy](PRIVACY.md) and [security model](SECURITY.md).
 
 ## ⚠️ A few honest limitations
 
 - This fixes one specific ChatGPT web-app failure mode, not every Bluetooth audio problem.
-- It can't see connections created before it loaded, which is why you need to reload existing ChatGPT tabs after installation.
+- It can't discover already-active connections retroactively unless they call an observed method, which is why you need to reload existing ChatGPT tabs after installation.
+- It does not automatically close negotiated silent connections, including the separate case observed on the Dot page; that could interrupt legitimate real-time features.
 - ChatGPT interface or WebRTC changes may require an update.
 - It can't inspect headset firmware decisions or audio sessions owned by other applications.
 - It doesn't work inside the native ChatGPT desktop or mobile apps.

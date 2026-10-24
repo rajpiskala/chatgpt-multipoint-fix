@@ -1,6 +1,6 @@
 # Privacy
 
-Effective: September 21, 2026
+Updated: October 23, 2026
 
 ChatGPT Multipoint Fix has no analytics, advertising,
 telemetry, tracking, or maintainer-operated server. The maintainer does not
@@ -10,7 +10,7 @@ usage information.
 ## Data the userscript handles
 
 The userscript runs only on pages under `https://chatgpt.com/*`. It observes
-the state of WebRTC peer connections created after the script loads and checks
+the state of WebRTC peer connections that call an observed method and checks
 whether ChatGPT is visibly in Voice Mode. It does not read conversation text.
 
 The script does not request microphone access, capture an audio track, record
@@ -38,6 +38,11 @@ requests under OpenAI's own privacy terms.
 `GM_registerMenuCommand` is used only to add local commands to Tampermonkey's
 menu. No broad website, cookie, browsing-history, clipboard, download, or
 cross-origin network permission is requested.
+
+`unsafeWindow` accesses the ChatGPT page's actual WebRTC objects instead of a
+userscript-only JavaScript shadow. Firefox's function-export bridge exposes
+only tracking hooks, diagnostic data and the existing local cleanup commands.
+It does not expose extension APIs, cookies, network or filesystem access.
 
 ## Contact
 

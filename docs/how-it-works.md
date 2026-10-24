@@ -37,9 +37,18 @@ refuse to hand playback to the phone or send a media-pause command back to it.
 
 ## What the userscript changes
 
-The userscript runs at `document-start` in the page's main JavaScript world.
-It wraps the native `RTCPeerConnection` constructor before ChatGPT creates
-voice preconnections, then records each newly created connection.
+The userscript starts at `document-start` and explicitly targets the page's
+WebRTC prototype through `unsafeWindow`. Firefox can run userscripts in a
+separate JavaScript world even while their buttons appear in the shared DOM.
+Version 1.3.0 exports method hooks and readable diagnostics across that boundary
+using Firefox's `exportFunction` and `cloneInto` APIs.
+
+It observes `createOffer`, `createAnswer`, description changes and track setup
+without replacing the native constructor or changing native promises. A cached
+constructor or previously created blank connection is covered when it next
+calls one of those methods. A connection already active before installation
+cannot be discovered retroactively without another observed call, so existing
+ChatGPT tabs still need reloading after an update.
 
 Every second, it classifies those tracked connections. Automatic cleanup is
 allowed only when all of these conditions remain true:
@@ -86,13 +95,15 @@ are the relevant signals for microphone use.
 
 | State | Meaning |
 | --- | --- |
-| Clear | No tracked connection is currently eligible for release. |
+| No stale offers | No tracked connection is currently eligible for release; this does not prove the OS audio stream is inactive. |
 | Warm | An unanswered audio offer is inside the grace period and can be released manually. |
 | Released | The script recently closed at least one eligible connection. |
 | Voice active | ChatGPT Voice Mode is visible, so cleanup is paused. |
+| Tracking lost | The page's method hooks changed; the script cannot confirm healthy tracking. |
 
 The optional button is only a diagnostic display. Automatic cleanup continues
-while the button is hidden.
+while the button is hidden. A lost-hook warning is shown even if the ordinary
+debug button is hidden.
 
 ## Diagnostic API
 
@@ -101,6 +112,10 @@ For local debugging, open the browser console on ChatGPT and inspect:
 ```javascript
 window.__chatgptBoseAudio.getStatus()
 ```
+
+`trackingHealthy` checks the actual page method hooks. The shared document also
+exposes `data-chatgpt-bose-version` and `data-chatgpt-bose-tracking` attributes
+for diagnosing a userscript-world mismatch.
 
 Other available methods:
 
@@ -123,6 +138,11 @@ The script fixes one page-level cause. It cannot:
 - affect the native ChatGPT desktop application;
 - repair pairing, codec, driver, or headset-call-profile problems; or
 - guarantee support for untested hardware.
+
+A negotiated connection can also deliver silent audio, as observed on the
+ChatGPT Dot page. This script deliberately does not treat silence as permission
+to close a negotiated session: doing so could interrupt legitimate voice or
+other real-time features.
 
 The implementation uses standard WebRTC properties documented by
 [MDN](https://developer.mozilla.org/en-US/docs/Web/API/RTCPeerConnection).

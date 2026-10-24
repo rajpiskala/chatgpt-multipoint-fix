@@ -13,8 +13,10 @@ profiles, or identifying diagnostic logs in a public issue.
 ## Design constraints
 
 - Run only on `https://chatgpt.com/*`.
-- Execute at document start so the original `RTCPeerConnection` constructor
-  can be wrapped before ChatGPT creates voice preconnections.
+- Execute at document start and instrument the page's actual WebRTC prototype,
+  not a userscript sandbox's shadow constructor.
+- Use Firefox's supported function-export bridge without enabling cross-origin
+  arguments or exposing privileged extension APIs to page scripts.
 - Make no userscript-owned network requests.
 - Request no microphone, camera, cookie, history, or cross-origin permissions.
 - Never close a connection that has a remote description.

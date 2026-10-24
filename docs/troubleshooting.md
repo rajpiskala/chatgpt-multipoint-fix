@@ -24,13 +24,27 @@ closes only the stale connection.
 5. Confirm the installed version matches the latest release.
 6. Temporarily disable other ChatGPT userscripts and retest for conflicts.
 
-## The “Audio clear” button is missing
+## The debug button is missing
 
 That is the default. The button is optional debugging UI; automatic cleanup is
 still active.
 
 Show it through **Toggle debug status button** in Tampermonkey's menu or press
 `Alt+Shift+D`.
+
+## The button appears but the page diagnostic API is missing
+
+This can indicate that an older version installed its tracking code in a
+userscript sandbox rather than the page's own JavaScript world. Update to 1.3.0
+and reload all existing ChatGPT tabs. The script now explicitly bridges to the
+page and exposes `trackingHealthy` in `getStatus()`.
+
+## The button says "Tracking lost"
+
+Another script replaced an observed WebRTC method, or the page constructor now
+uses an uninstrumented prototype. Tracking is not verified. Reload the page and
+compare with other WebRTC-modifying scripts disabled; do not treat this state
+as a successful Bluetooth release.
 
 ## The button says “Voice active”
 

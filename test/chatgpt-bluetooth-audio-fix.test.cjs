@@ -6,10 +6,10 @@ const path = require('node:path');
 const {
     DEFAULT_CONFIG,
     closeRecord,
-    createConstructorWrapper,
     createRecord,
     getButtonPalette,
     inspectRecord,
+    resolvePageWindow,
 } = require('../src/chatgpt-bluetooth-audio-fix.user.js');
 
 class FakeRTCPeerConnection {
@@ -65,17 +65,12 @@ function makeWarmConnection() {
     return pc;
 }
 
-test('constructor wrapper preserves WebRTC construction and static APIs', () => {
-    const created = [];
-    const Wrapped = createConstructorWrapper(FakeRTCPeerConnection, (pc) => created.push(pc));
-    const pc = new Wrapped({ bundlePolicy: 'max-bundle' });
-
-    assert.equal(created.length, 1);
-    assert.equal(created[0], pc);
-    assert.equal(pc.configuration.bundlePolicy, 'max-bundle');
-    assert.equal(pc instanceof FakeRTCPeerConnection, true);
-    assert.equal(pc instanceof Wrapped, true);
-    assert.equal(Wrapped.generateCertificate(), 'certificate');
+test('resolves Firefox page objects rather than a userscript window shadow', () => {
+    const page = { RTCPeerConnection: FakeRTCPeerConnection };
+    const sandbox = { wrappedJSObject: page };
+    assert.equal(resolvePageWindow(sandbox), page);
+    assert.equal(resolvePageWindow({}, sandbox), page);
+    assert.equal(resolvePageWindow(page), page);
 });
 
 test('ignores the blank peer connection ChatGPT keeps as a constructor cache', () => {
@@ -157,7 +152,7 @@ test('debug status button defaults to hidden and has a dark-mode palette', () =>
     assert.equal(darkClear.borderColor, 'rgba(255, 255, 255, 0.18)');
 });
 
-test('userscript metadata requests early main-world Firefox injection', () => {
+test('userscript metadata requests early injection with explicit page-world access', () => {
     const sourcePath = path.join(
         __dirname,
         '..',
@@ -166,9 +161,10 @@ test('userscript metadata requests early main-world Firefox injection', () => {
     );
     const source = fs.readFileSync(sourcePath, 'utf8');
 
-    assert.match(source, /@version\s+1\.2\.1/);
+    assert.match(source, /@version\s+1\.3\.0/);
     assert.match(source, /@run-at\s+document-start/);
-    assert.match(source, /@sandbox\s+raw/);
+    assert.match(source, /@sandbox\s+JavaScript/);
+    assert.match(source, /@grant\s+unsafeWindow/);
     assert.match(source, /@grant\s+GM_registerMenuCommand/);
     assert.match(source, /GM_registerMenuCommand\('Toggle debug status button'/);
 });
